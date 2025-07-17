@@ -204,7 +204,7 @@ class ParticleAnimation {
         
         for (let i = 0; i < this.particleCount; i++) {
             this.particleVelocities.push(0, 0, 0); // vx, vy, vz
-            this.particleSizes.push(0.05 + Math.random() * 0.02); // varied sizes
+            this.particleSizes.push(0.3 + Math.random() * 0.2); // smaller, more elegant sizes
             this.particleOpacities.push(1.0);
             this.particlePhases.push(Math.random() * Math.PI * 2); // for breathing
         }
@@ -242,15 +242,56 @@ class ParticleAnimation {
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
         
-        // 创建粒子材质 - 优化暮光效果
-        const material = new THREE.PointsMaterial({
-            size: 0.06, // Slightly larger for better twilight visibility
-            vertexColors: true,
+        // 创建自定义圆形粒子材质
+        const vertexShader = `
+            attribute float size;
+            attribute vec3 color;
+            varying vec3 vColor;
+            varying float vSize;
+            
+            void main() {
+                vColor = color;
+                vSize = size;
+                
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                
+                // 设置点的大小，考虑距离衰减 - 更小的缩放
+                gl_PointSize = size * 150.0 / -mvPosition.z;
+            }
+        `;
+        
+        const fragmentShader = `
+            varying vec3 vColor;
+            varying float vSize;
+            
+            void main() {
+                // 计算从中心的距离
+                vec2 center = gl_PointCoord - vec2(0.5, 0.5);
+                float dist = length(center);
+                
+                // 创建圆形形状 - 平滑边缘
+                float alpha = smoothstep(0.5, 0.3, dist);
+                
+                // 创建径向渐变效果 - 更柔和
+                float radialGlow = 1.0 - smoothstep(0.0, 0.45, dist);
+                vec3 finalColor = vColor * (0.7 + 0.2 * radialGlow);
+                
+                // 添加内部光晕效果 - 减少亮度
+                float innerGlow = 1.0 - smoothstep(0.0, 0.25, dist);
+                finalColor += vec3(innerGlow * 0.15);
+                
+                gl_FragColor = vec4(finalColor, alpha * 0.7);
+            }
+        `;
+        
+        const material = new THREE.ShaderMaterial({
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
             transparent: true,
-            opacity: 0.9, // Slight transparency for ethereal effect
             blending: THREE.AdditiveBlending,
-            sizeAttenuation: true,
-            alphaTest: 0.001 // Better rendering for dark background
+            depthTest: false,
+            depthWrite: false
         });
         
         // 创建粒子系统
@@ -352,7 +393,7 @@ class ParticleAnimation {
         // Enhanced wave parameters for elegant breathing
         const waveSpeed = 0.002;  // Slower, more elegant
         const waveIntensity = 0.15;
-        const sizeWaveIntensity = 0.03;
+        const sizeWaveIntensity = 0.05; // Reduced for smaller particles
         
         // Create multiple wave frequencies for more organic feel
         const primaryWave = this.globalTime * waveSpeed;
@@ -464,7 +505,7 @@ class ParticleAnimation {
                 positions[index + 2] = this.positions1[index + 2];
                 
                 // Size pulse with energy wave
-                sizes[i] = this.particleSizes[i] + waveIntensity * 0.04;
+                sizes[i] = this.particleSizes[i] + waveIntensity * 0.08;
                 
             } else if (this.stateProgress <= phase2Duration) {
                 // Phase 2: Elegant Wave Propagation
@@ -494,7 +535,7 @@ class ParticleAnimation {
                 positions[index + 2] = this.positions1[index + 2] + oscillationIntensity * 0.5 * Math.cos(phase2Progress * Math.PI * 4);
                 
                 // Dynamic size variation
-                sizes[i] = this.particleSizes[i] + waveIntensity * 0.05 * Math.sin(phase2Progress * Math.PI * 8);
+                sizes[i] = this.particleSizes[i] + waveIntensity * 0.1 * Math.sin(phase2Progress * Math.PI * 8);
                 
             } else {
                 // Phase 3: Elegant Stabilization
@@ -654,8 +695,8 @@ class ParticleAnimation {
                 colors[index + 2] += transformationGlow * 0.1;
                 
                 // Dynamic size during transformation
-                const sizeFlow = Math.sin(adjustedProgress * Math.PI * 2) * 0.03;
-                sizes[i] = this.particleSizes[i] + transformationGlow * 0.04 + sizeFlow;
+                const sizeFlow = Math.sin(adjustedProgress * Math.PI * 2) * 0.06;
+                sizes[i] = this.particleSizes[i] + transformationGlow * 0.08 + sizeFlow;
                 
             } else {
                 // Phase 3: Elegant Settlement - Smooth arrival at final positions
