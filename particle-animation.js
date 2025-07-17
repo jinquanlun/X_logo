@@ -63,7 +63,7 @@ class ParticleAnimation {
             alpha: true
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x1a1a1a);
+        this.renderer.setClearColor(0x000000);
         document.getElementById('canvasContainer').appendChild(this.renderer.domElement);
         
         // 处理窗口大小调整
@@ -221,10 +221,19 @@ class ParticleAnimation {
             positions[i * 3 + 1] = this.spreadPositions[i * 3 + 1];
             positions[i * 3 + 2] = this.spreadPositions[i * 3 + 2];
             
-            // 设置粒子颜色
-            colors[i * 3] = 1.0; // r
-            colors[i * 3 + 1] = 1.0; // g
-            colors[i * 3 + 2] = 1.0; // b
+            // 设置粒子颜色 - 暮光深蓝紫色
+            const twilightVariation = Math.random();
+            if (twilightVariation < 0.6) {
+                // Deep blue twilight
+                colors[i * 3] = 0.2 + Math.random() * 0.3; // r: 0.2-0.5
+                colors[i * 3 + 1] = 0.3 + Math.random() * 0.4; // g: 0.3-0.7
+                colors[i * 3 + 2] = 0.8 + Math.random() * 0.2; // b: 0.8-1.0
+            } else {
+                // Deep purple twilight
+                colors[i * 3] = 0.4 + Math.random() * 0.4; // r: 0.4-0.8
+                colors[i * 3 + 1] = 0.2 + Math.random() * 0.3; // g: 0.2-0.5
+                colors[i * 3 + 2] = 0.7 + Math.random() * 0.3; // b: 0.7-1.0
+            }
             
             sizes[i] = this.particleSizes[i];
         }
@@ -233,14 +242,15 @@ class ParticleAnimation {
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
         
-        // 创建粒子材质
+        // 创建粒子材质 - 优化暮光效果
         const material = new THREE.PointsMaterial({
-            size: 0.05,
+            size: 0.06, // Slightly larger for better twilight visibility
             vertexColors: true,
             transparent: true,
-            opacity: 1.0,
+            opacity: 0.9, // Slight transparency for ethereal effect
             blending: THREE.AdditiveBlending,
-            sizeAttenuation: true
+            sizeAttenuation: true,
+            alphaTest: 0.001 // Better rendering for dark background
         });
         
         // 创建粒子系统
@@ -441,11 +451,11 @@ class ParticleAnimation {
                 const waveRadius = phase1Progress * 5; // Expanding radius
                 const waveIntensity = Math.max(0, 1 - Math.abs(distanceFromCenter - waveRadius) * 2);
                 
-                // Elegant color transition: White -> Electric Blue -> Cyan
+                // Elegant color transition: Twilight -> Bright Purple -> Electric Blue
                 const colorIntensity = energySurge * waveIntensity;
-                colors[index] = 1.0 - colorIntensity * 0.3; // r: white to light blue
-                colors[index + 1] = 1.0 - colorIntensity * 0.1; // g: maintain brightness
-                colors[index + 2] = 1.0; // b: full blue
+                colors[index] = 0.3 + colorIntensity * 0.5; // r: deep purple to bright
+                colors[index + 1] = 0.2 + colorIntensity * 0.6; // g: low to medium
+                colors[index + 2] = 0.9 + colorIntensity * 0.1; // b: maintain deep blue
                 
                 // Subtle outward energy movement
                 const energyPush = energySurge * waveIntensity * 0.15;
@@ -468,15 +478,14 @@ class ParticleAnimation {
                 const combinedWave = (fastWave + mediumWave + slowWave) / 1.9;
                 const waveIntensity = Math.abs(combinedWave) * (1 - normalizedDistance * 0.3);
                 
-                // Sophisticated color palette: Blue -> Cyan -> Electric White
-                const hue = 0.5 + combinedWave * 0.15; // Blue to cyan range
-                const saturation = 0.8 - waveIntensity * 0.3;
-                const brightness = 0.9 + waveIntensity * 0.1;
+                // Sophisticated twilight color palette: Deep Purple -> Bright Blue -> Electric Purple
+                const twilightPhase = combinedWave * 0.5 + 0.5; // 0 to 1
+                const intensity = waveIntensity;
                 
-                // Convert HSB to RGB for elegant color transitions
-                colors[index] = brightness * (1 - saturation * Math.max(0, hue - 0.33) * 3); // r
-                colors[index + 1] = brightness * (1 - saturation * Math.abs(hue - 0.5) * 2); // g
-                colors[index + 2] = brightness; // b
+                // Create twilight color transitions
+                colors[index] = 0.2 + intensity * 0.6 + twilightPhase * 0.3; // r: purple variations
+                colors[index + 1] = 0.1 + intensity * 0.4 + Math.sin(twilightPhase * Math.PI) * 0.3; // g: subtle variations
+                colors[index + 2] = 0.7 + intensity * 0.3; // b: maintain deep blue base
                 
                 // Elegant oscillation around X shape
                 const oscillationIntensity = waveIntensity * 0.08;
@@ -491,12 +500,13 @@ class ParticleAnimation {
                 // Phase 3: Elegant Stabilization
                 const phase3Progress = (this.stateProgress - phase2Duration) / (phase3Duration - phase2Duration);
                 
-                // Gradual return to white with subtle energy remnants
-                const energyRemnant = (1 - phase3Progress) * 0.2 * Math.sin(this.globalTime * 0.01 + normalizedDistance * 3);
+                // Gradual return to twilight colors with subtle energy remnants
+                const energyRemnant = (1 - phase3Progress) * 0.3 * Math.sin(this.globalTime * 0.01 + normalizedDistance * 3);
+                const twilightBase = i % 2 === 0 ? 0.6 : 0.4; // Alternate between blue and purple
                 
-                colors[index] = 1.0 - energyRemnant * 0.1; // r
-                colors[index + 1] = 1.0 - energyRemnant * 0.05; // g  
-                colors[index + 2] = 1.0; // b
+                colors[index] = twilightBase * 0.7 + energyRemnant * 0.3; // r: purple tints
+                colors[index + 1] = twilightBase * 0.5 + energyRemnant * 0.2; // g: subtle variations
+                colors[index + 2] = 0.8 + energyRemnant * 0.2; // b: maintain deep blue
                 
                 // Smooth return to original positions
                 const returnProgress = this.easeInOutCubic(phase3Progress);
@@ -572,11 +582,11 @@ class ParticleAnimation {
                 positions[index + 1] = compressionY;
                 positions[index + 2] = startZ;
                 
-                // Energy gathering color shift: White -> Soft Gold
-                const energyGlow = preparationIntensity * 0.3;
-                colors[index] = 1.0; // r
-                colors[index + 1] = 1.0 - energyGlow * 0.1; // g: slight golden tint
-                colors[index + 2] = 1.0 - energyGlow * 0.3; // b: reduce blue for warmth
+                // Energy gathering color shift: Twilight -> Bright Purple
+                const energyGlow = preparationIntensity * 0.4;
+                colors[index] = 0.3 + energyGlow * 0.5; // r: purple enhancement
+                colors[index + 1] = 0.2 + energyGlow * 0.3; // g: subtle increase
+                colors[index + 2] = 0.8 + energyGlow * 0.2; // b: maintain blue base
                 
                 // Size preparation - slight growth
                 sizes[i] = this.particleSizes[i] + preparationIntensity * 0.02;
@@ -620,22 +630,22 @@ class ParticleAnimation {
                 positions[index + 1] = currentY + flowY;
                 positions[index + 2] = currentZ;
                 
-                // Dynamic color transformation: Gold -> Electric Blue -> White
+                // Dynamic color transformation: Purple -> Electric Blue -> Deep Twilight
                 const colorPhase = adjustedProgress * Math.PI;
                 const transformationGlow = Math.sin(colorPhase) * 0.4;
                 
                 if (adjustedProgress <= 0.5) {
-                    // Gold to Electric Blue
+                    // Purple to Electric Blue
                     const blueTransition = adjustedProgress * 2;
-                    colors[index] = 1.0 - blueTransition * 0.3; // r: reduce red
-                    colors[index + 1] = 1.0 - blueTransition * 0.2; // g: slight reduction
-                    colors[index + 2] = 1.0; // b: maintain blue
+                    colors[index] = 0.5 - blueTransition * 0.3; // r: reduce purple
+                    colors[index + 1] = 0.3 + blueTransition * 0.4; // g: increase for blue
+                    colors[index + 2] = 0.8 + blueTransition * 0.2; // b: enhance blue
                 } else {
-                    // Electric Blue to White
-                    const whiteTransition = (adjustedProgress - 0.5) * 2;
-                    colors[index] = 0.7 + whiteTransition * 0.3; // r: restore white
-                    colors[index + 1] = 0.8 + whiteTransition * 0.2; // g: restore white
-                    colors[index + 2] = 1.0; // b: maintain
+                    // Electric Blue to Deep Twilight
+                    const twilightTransition = (adjustedProgress - 0.5) * 2;
+                    colors[index] = 0.2 + twilightTransition * 0.4; // r: return to purple
+                    colors[index + 1] = 0.7 - twilightTransition * 0.4; // g: reduce for twilight
+                    colors[index + 2] = 1.0; // b: maintain deep blue
                 }
                 
                 // Add transformation energy to colors
@@ -657,11 +667,12 @@ class ParticleAnimation {
                 positions[index + 1] = endY;
                 positions[index + 2] = endZ;
                 
-                // Gentle color restoration to pure white
+                // Gentle color restoration to twilight colors
                 const colorRestoration = settlementEase;
-                colors[index] = THREE.MathUtils.lerp(colors[index], 1.0, colorRestoration * 0.5);
-                colors[index + 1] = THREE.MathUtils.lerp(colors[index + 1], 1.0, colorRestoration * 0.5);
-                colors[index + 2] = THREE.MathUtils.lerp(colors[index + 2], 1.0, colorRestoration * 0.5);
+                const finalTwilight = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8]; // Alternate blue/purple
+                colors[index] = THREE.MathUtils.lerp(colors[index], finalTwilight[0], colorRestoration * 0.6);
+                colors[index + 1] = THREE.MathUtils.lerp(colors[index + 1], finalTwilight[1], colorRestoration * 0.6);
+                colors[index + 2] = THREE.MathUtils.lerp(colors[index + 2], finalTwilight[2], colorRestoration * 0.6);
                 
                 // Size normalization
                 sizes[i] = THREE.MathUtils.lerp(sizes[i], this.particleSizes[i], settlementEase);
