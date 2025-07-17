@@ -26,6 +26,54 @@ class ParticleAnimation {
         this.particleSizes = [];
         this.particleOpacities = [];
         this.particlePhases = [];
+        this.particleTrails = [];
+        
+        // Interactive controls
+        this.mouse = { x: 0, y: 0, isDown: false };
+        this.mouseForce = { x: 0, y: 0, strength: 0 };
+        this.attractionMode = false;
+        this.interactionRadius = 2.0;
+        this.forceStrength = 0.02;
+        
+        // Physics enhancement
+        this.gravity = { x: 0, y: 0, z: 0 };
+        this.windForce = { x: 0, y: 0, z: 0 };
+        this.turbulence = 0.005;
+        
+        // Camera controls
+        this.cameraTarget = { x: 0, y: 0, z: 5 };
+        this.cameraSpeed = 0.05;
+        this.zoomLevel = 1.0;
+        
+        // Audio reactive features
+        this.audioContext = null;
+        this.analyser = null;
+        this.audioData = null;
+        this.audioEnabled = false;
+        this.bassFrequency = 0;
+        this.midFrequency = 0;
+        this.trebleFrequency = 0;
+        
+        // Particle emission system
+        this.emissionPoints = [];
+        this.maxEmissionParticles = 500;
+        this.emissionRate = 5;
+        this.emissionEnabled = false;
+        
+        // Performance optimization
+        this.frameCount = 0;
+        this.qualityLevel = 'high'; // 'low', 'medium', 'high'
+        this.performanceMode = false;
+        
+        // Color schemes
+        this.colorScheme = 'twilight';
+        this.colorSchemes = {
+            twilight: [[0.2, 0.3, 0.8], [0.4, 0.2, 0.7]],
+            neon: [[0.0, 1.0, 1.0], [1.0, 0.0, 1.0]],
+            fire: [[1.0, 0.3, 0.0], [1.0, 0.8, 0.0]],
+            forest: [[0.0, 0.8, 0.3], [0.2, 0.6, 0.1]],
+            ocean: [[0.0, 0.4, 0.8], [0.1, 0.7, 0.9]]
+        };
         
         // Animation state management
         this.currentState = ANIMATION_STATES.INITIAL_SPREAD;
@@ -348,37 +396,143 @@ class ParticleAnimation {
     }
     
     updateConvergingState() {
-        const duration = 3000; // 3 seconds to converge
+        const duration = 4000; // Extended for ultra-smooth convergence
         this.stateProgress = Math.min(this.globalTime / duration, 1);
         
-        const easeProgress = this.easeInOutCubic(this.stateProgress);
         const positions = this.particles.geometry.attributes.position.array;
+        const colors = this.particles.geometry.attributes.color.array;
+        const sizes = this.particles.geometry.attributes.size.array;
         
-        // Converge from spread positions to X shape (positions1)
+        // Multi-phase convergence for maximum elegance
+        const phase1Duration = 0.20; // Preparation (0-20%)
+        const phase2Duration = 0.85; // Main convergence (20-85%)
+        const phase3Duration = 1.0;  // Final alignment (85-100%)
+        
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
             
-            positions[index] = THREE.MathUtils.lerp(
-                this.spreadPositions[index],
-                this.positions1[index],
-                easeProgress
+            // Current and target positions
+            const startX = this.spreadPositions[index];
+            const startY = this.spreadPositions[index + 1];
+            const startZ = this.spreadPositions[index + 2];
+            const endX = this.positions1[index];
+            const endY = this.positions1[index + 1];
+            const endZ = this.positions1[index + 2];
+            
+            // Calculate particle characteristics for organic variation
+            const distanceToTarget = Math.sqrt(
+                (endX - startX) * (endX - startX) + 
+                (endY - startY) * (endY - startY) + 
+                (endZ - startZ) * (endZ - startZ)
             );
-            positions[index + 1] = THREE.MathUtils.lerp(
-                this.spreadPositions[index + 1],
-                this.positions1[index + 1],
-                easeProgress
-            );
-            positions[index + 2] = THREE.MathUtils.lerp(
-                this.spreadPositions[index + 2],
-                this.positions1[index + 2],
-                easeProgress
-            );
+            const normalizedDistance = Math.min(distanceToTarget / 10, 1);
+            const particlePhase = this.particlePhases[i];
+            const targetDistance = Math.sqrt(endX * endX + endY * endY);
+            
+            if (this.stateProgress <= phase1Duration) {
+                // Phase 1: Preparation - Particles slow down and orient
+                const phase1Progress = this.stateProgress / phase1Duration;
+                const preparationEase = this.ultraSmoothEasing(phase1Progress);
+                
+                // Gentle deceleration from random motion
+                const decelerationFactor = 1 - preparationEase * 0.3;
+                positions[index] = startX;
+                positions[index + 1] = startY;
+                positions[index + 2] = startZ;
+                
+                // Subtle color shift to show awakening
+                const awakenIntensity = preparationEase * 0.2;
+                colors[index] = 0.2 + awakenIntensity;
+                colors[index + 1] = 0.2 + awakenIntensity * 0.8;
+                colors[index + 2] = 0.6 + awakenIntensity * 0.4;
+                
+                sizes[i] = this.particleSizes[i] + awakenIntensity * 0.02;
+                
+            } else if (this.stateProgress <= phase2Duration) {
+                // Phase 2: Main Convergence - Organic curved trajectories
+                const phase2Progress = (this.stateProgress - phase1Duration) / (phase2Duration - phase1Duration);
+                
+                // Staggered start times based on distance for wave effect
+                const delayFactor = normalizedDistance * 0.3 + (Math.sin(particlePhase) + 1) * 0.1;
+                const adjustedProgress = Math.max(0, Math.min(1, (phase2Progress - delayFactor) / (1 - delayFactor * 0.7)));
+                
+                // Ultra-smooth convergence easing
+                const convergenceEase = this.ultraSmoothEasing(adjustedProgress);
+                
+                // Create elegant curved paths using gravitational attraction simulation
+                const attractionStrength = convergenceEase * convergenceEase; // Accelerating attraction
+                const directionX = endX - startX;
+                const directionY = endY - startY;
+                const directionZ = endZ - startZ;
+                
+                // Add curved trajectory with control points for organic movement
+                const midPointX = startX + directionX * 0.5 + Math.sin(particlePhase + Math.PI * 0.5) * distanceToTarget * 0.1;
+                const midPointY = startY + directionY * 0.5 + Math.cos(particlePhase + Math.PI * 0.3) * distanceToTarget * 0.1;
+                const midPointZ = startZ + directionZ * 0.5 + Math.sin(convergenceEase * Math.PI) * 0.5;
+                
+                // Quadratic Bézier interpolation for smooth curves
+                let currentX, currentY, currentZ;
+                if (convergenceEase <= 0.5) {
+                    const t = convergenceEase * 2;
+                    currentX = THREE.MathUtils.lerp(startX, midPointX, t);
+                    currentY = THREE.MathUtils.lerp(startY, midPointY, t);
+                    currentZ = THREE.MathUtils.lerp(startZ, midPointZ, t);
+                } else {
+                    const t = (convergenceEase - 0.5) * 2;
+                    currentX = THREE.MathUtils.lerp(midPointX, endX, t);
+                    currentY = THREE.MathUtils.lerp(midPointY, endY, t);
+                    currentZ = THREE.MathUtils.lerp(midPointZ, endZ, t);
+                }
+                
+                // Add organic flow effects during convergence
+                const flowIntensity = Math.sin(convergenceEase * Math.PI) * 0.08 * (1 - convergenceEase);
+                const flowAngle = Math.atan2(directionY, directionX) + Math.PI * 0.5;
+                const flowX = Math.cos(flowAngle + particlePhase * 0.5) * flowIntensity;
+                const flowY = Math.sin(flowAngle + particlePhase * 0.5) * flowIntensity;
+                
+                positions[index] = currentX + flowX;
+                positions[index + 1] = currentY + flowY;
+                positions[index + 2] = currentZ;
+                
+                // Dynamic color transition during convergence
+                const convergenceIntensity = Math.sin(convergenceEase * Math.PI) * 0.4;
+                const targetColor = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8];
+                
+                colors[index] = 0.2 + convergenceIntensity + convergenceEase * (targetColor[0] - 0.2) * 0.6;
+                colors[index + 1] = 0.2 + convergenceIntensity * 0.8 + convergenceEase * (targetColor[1] - 0.2) * 0.6;
+                colors[index + 2] = 0.6 + convergenceIntensity * 0.4 + convergenceEase * (targetColor[2] - 0.6) * 0.6;
+                
+                // Size variation during convergence
+                const sizeVariation = Math.sin(convergenceEase * Math.PI * 2 + particlePhase) * 0.02;
+                sizes[i] = this.particleSizes[i] + convergenceIntensity * 0.03 + sizeVariation;
+                
+            } else {
+                // Phase 3: Final Alignment - Perfect positioning
+                const phase3Progress = (this.stateProgress - phase2Duration) / (phase3Duration - phase2Duration);
+                const alignmentEase = this.ultraSmoothEasing(phase3Progress);
+                
+                // Perfect final positioning
+                positions[index] = endX;
+                positions[index + 1] = endY;
+                positions[index + 2] = endZ;
+                
+                // Final color alignment to twilight palette
+                const finalColor = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8];
+                colors[index] = THREE.MathUtils.lerp(colors[index], finalColor[0], alignmentEase * 0.8);
+                colors[index + 1] = THREE.MathUtils.lerp(colors[index + 1], finalColor[1], alignmentEase * 0.8);
+                colors[index + 2] = THREE.MathUtils.lerp(colors[index + 2], finalColor[2], alignmentEase * 0.8);
+                
+                // Size normalization
+                sizes[i] = THREE.MathUtils.lerp(sizes[i], this.particleSizes[i], alignmentEase);
+            }
         }
         
         this.particles.geometry.attributes.position.needsUpdate = true;
+        this.particles.geometry.attributes.color.needsUpdate = true;
+        this.particles.geometry.attributes.size.needsUpdate = true;
         
         if (this.stateProgress >= 1) {
-            console.log('Convergence complete, starting breathing phase');
+            console.log('Ultra-smooth convergence complete, starting breathing phase');
             this.transitionToState(ANIMATION_STATES.X_BREATHING);
         }
     }
@@ -389,22 +543,24 @@ class ParticleAnimation {
         
         const positions = this.particles.geometry.attributes.position.array;
         const sizes = this.particles.geometry.attributes.size.array;
+        const colors = this.particles.geometry.attributes.color.array;
         
-        // Enhanced wave parameters for elegant breathing
-        const waveSpeed = 0.002;  // Slower, more elegant
-        const waveIntensity = 0.15;
-        const sizeWaveIntensity = 0.05; // Reduced for smaller particles
+        // Ultra-smooth breathing parameters
+        const waveSpeed = 0.0015;  // Even slower for maximum elegance
+        const waveIntensity = 0.12;
+        const sizeWaveIntensity = 0.04;
         
-        // Create multiple wave frequencies for more organic feel
+        // Multiple harmonious wave frequencies
         const primaryWave = this.globalTime * waveSpeed;
-        const secondaryWave = this.globalTime * waveSpeed * 1.618; // Golden ratio frequency
-        const tertiaryWave = this.globalTime * waveSpeed * 0.5;
+        const secondaryWave = this.globalTime * waveSpeed * 1.618; // Golden ratio
+        const tertiaryWave = this.globalTime * waveSpeed * 0.618; // Golden ratio complement
+        const quaternaryWave = this.globalTime * waveSpeed * 2.618; // Golden ratio squared
         
-        // Apply elegant wave propagation
+        // Apply ultra-elegant wave propagation
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
             
-            // Calculate distance from center for radial wave effect
+            // Enhanced distance calculations
             const centerX = 0;
             const centerY = 0;
             const particleX = this.positions1[index];
@@ -414,43 +570,61 @@ class ParticleAnimation {
                 (particleY - centerY) * (particleY - centerY)
             );
             
-            // Create radial wave propagation from center outward
-            const radialPhase = distanceFromCenter * 0.8; // Wave frequency based on distance
+            // Radial and angular components for complex wave patterns
+            const radialPhase = distanceFromCenter * 0.6;
+            const angularPhase = Math.atan2(particleY, particleX) * 2;
             const individualPhase = this.particlePhases[i];
             
-            // Combine multiple wave frequencies for organic movement
-            const primaryBreathing = Math.sin(primaryWave + radialPhase + individualPhase);
-            const secondaryBreathing = Math.sin(secondaryWave + radialPhase * 0.5) * 0.4;
-            const tertiaryBreathing = Math.sin(tertiaryWave + individualPhase * 2) * 0.2;
+            // Create complex harmonic breathing patterns
+            const wave1 = Math.sin(primaryWave + radialPhase + individualPhase);
+            const wave2 = Math.sin(secondaryWave + angularPhase + individualPhase * 0.5) * 0.6;
+            const wave3 = Math.sin(tertiaryWave + radialPhase * 1.5) * 0.3;
+            const wave4 = Math.sin(quaternaryWave + angularPhase * 0.5 + individualPhase * 2) * 0.15;
             
-            const combinedWave = primaryBreathing + secondaryBreathing + tertiaryBreathing;
-            const normalizedWave = combinedWave / 1.6; // Normalize amplitude
+            // Combine waves with ultra-smooth easing
+            const combinedWave = wave1 + wave2 + wave3 + wave4;
+            const normalizedWave = combinedWave / 2.05;
+            const smoothedWave = this.ultraSmoothEasing((normalizedWave + 1) * 0.5) * 2 - 1;
             
-            // Apply wave intensity that decreases with distance (stronger at center)
-            const intensityMultiplier = Math.max(0.3, 1 - distanceFromCenter * 0.15);
-            const finalIntensity = normalizedWave * waveIntensity * intensityMultiplier;
+            // Distance-based intensity modulation
+            const intensityMultiplier = Math.max(0.2, 1 - distanceFromCenter * 0.12);
+            const finalIntensity = smoothedWave * waveIntensity * intensityMultiplier;
             
-            // Calculate radial direction for outward/inward movement
+            // Enhanced radial breathing with spiral component
             const angle = Math.atan2(particleY - centerY, particleX - centerX);
-            const radialX = Math.cos(angle);
-            const radialY = Math.sin(angle);
+            const spiralOffset = Math.sin(primaryWave * 3 + radialPhase) * 0.02;
+            const radialX = Math.cos(angle + spiralOffset);
+            const radialY = Math.sin(angle + spiralOffset);
             
-            // Apply elegant radial breathing movement
-            positions[index] = this.positions1[index] + radialX * finalIntensity;
-            positions[index + 1] = this.positions1[index + 1] + radialY * finalIntensity;
-            positions[index + 2] = this.positions1[index + 2] + finalIntensity * 0.3;
+            // Apply breathing movement with micro-variations
+            const microVariationX = Math.sin(individualPhase + primaryWave * 2) * 0.005;
+            const microVariationY = Math.cos(individualPhase + primaryWave * 2) * 0.005;
             
-            // Add size breathing for extra elegance
-            const sizeWave = Math.sin(primaryWave + radialPhase * 0.3 + individualPhase) * sizeWaveIntensity;
-            sizes[i] = this.particleSizes[i] + sizeWave;
+            positions[index] = this.positions1[index] + radialX * finalIntensity + microVariationX;
+            positions[index + 1] = this.positions1[index + 1] + radialY * finalIntensity + microVariationY;
+            positions[index + 2] = this.positions1[index + 2] + finalIntensity * 0.25;
+            
+            // Enhanced size breathing with smooth pulsing
+            const sizePhase = primaryWave + radialPhase * 0.4 + individualPhase;
+            const sizeWave = Math.sin(sizePhase) * sizeWaveIntensity;
+            const smoothSizeWave = this.ultraSmoothEasing((sizeWave + sizeWaveIntensity) / (sizeWaveIntensity * 2)) * sizeWaveIntensity * 2 - sizeWaveIntensity;
+            sizes[i] = this.particleSizes[i] + smoothSizeWave;
+            
+            // Subtle color breathing for extra life
+            const colorIntensity = Math.abs(finalIntensity) * 0.1;
+            const baseColor = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8];
+            colors[index] = baseColor[0] + colorIntensity;
+            colors[index + 1] = baseColor[1] + colorIntensity * 0.7;
+            colors[index + 2] = baseColor[2] + colorIntensity * 0.3;
         }
         
         this.particles.geometry.attributes.position.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
+        this.particles.geometry.attributes.color.needsUpdate = true;
         
         // Simulate loading complete after breathing
         if (this.stateProgress >= 1) {
-            console.log('Loading complete, starting activation');
+            console.log('Ultra-smooth breathing complete, starting activation');
             this.loadingComplete = true;
             this.transitionToState(ANIMATION_STATES.ACTIVATION);
         }
@@ -575,17 +749,18 @@ class ParticleAnimation {
     }
     
     updateMorphingState() {
-        const duration = 4000; // Extended duration for elegant morphing
+        const duration = 6000; // Extended duration for ultra-smooth morphing
         this.stateProgress = Math.min(this.globalTime / duration, 1);
         
         const positions = this.particles.geometry.attributes.position.array;
         const colors = this.particles.geometry.attributes.color.array;
         const sizes = this.particles.geometry.attributes.size.array;
         
-        // Elegant morphing phases
-        const phase1Duration = 0.25; // Preparation phase (0-25%)
-        const phase2Duration = 0.75; // Active transformation (25-75%)
-        const phase3Duration = 1.0;  // Settlement phase (75-100%)
+        // Ultra-elegant morphing phases with smooth transitions
+        const phase1Duration = 0.15; // Quick anticipation (0-15%)
+        const phase2Duration = 0.25; // Preparation wave (15-25%)
+        const phase3Duration = 0.80; // Main transformation (25-80%)
+        const phase4Duration = 1.0;  // Final settlement (80-100%)
         
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
@@ -603,117 +778,153 @@ class ParticleAnimation {
             const deltaZ = endZ - startZ;
             const transformDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
             
-            // Calculate distance from center for wave effects
-            const particleX = (startX + endX) * 0.5; // Average position for center calculation
-            const particleY = (startY + endY) * 0.5;
+            // Enhanced distance calculations for wave effects
+            const particleX = startX;
+            const particleY = startY;
             const distanceFromCenter = Math.sqrt(particleX * particleX + particleY * particleY);
-            const normalizedDistance = Math.min(distanceFromCenter / 4, 1);
+            const normalizedDistance = Math.min(distanceFromCenter / 5, 1);
+            const angle = Math.atan2(particleY, particleX);
+            
+            // Individual particle characteristics for organic variation
+            const particlePhase = this.particlePhases[i];
+            const particleVariation = (Math.sin(particlePhase) + 1) * 0.5; // 0-1
             
             if (this.stateProgress <= phase1Duration) {
-                // Phase 1: Elegant Preparation - Particles gather energy for transformation
+                // Phase 1: Subtle Anticipation - Ultra-gentle preparation
                 const phase1Progress = this.stateProgress / phase1Duration;
-                const preparationIntensity = Math.sin(phase1Progress * Math.PI) * 0.6;
+                const anticipationCurve = this.ultraSmoothEasing(phase1Progress);
                 
-                // Subtle anticipation movement - slight compression toward center
-                const compressionFactor = preparationIntensity * 0.05;
-                const compressionX = startX * (1 - compressionFactor);
-                const compressionY = startY * (1 - compressionFactor);
+                // Micro-compression toward transformation direction
+                const anticipationIntensity = anticipationCurve * 0.03;
+                const directionX = deltaX / Math.max(transformDistance, 0.01);
+                const directionY = deltaY / Math.max(transformDistance, 0.01);
                 
-                positions[index] = compressionX;
-                positions[index + 1] = compressionY;
+                positions[index] = startX - directionX * anticipationIntensity;
+                positions[index + 1] = startY - directionY * anticipationIntensity;
                 positions[index + 2] = startZ;
                 
-                // Energy gathering color shift: Twilight -> Bright Purple
-                const energyGlow = preparationIntensity * 0.4;
-                colors[index] = 0.3 + energyGlow * 0.5; // r: purple enhancement
-                colors[index + 1] = 0.2 + energyGlow * 0.3; // g: subtle increase
-                colors[index + 2] = 0.8 + energyGlow * 0.2; // b: maintain blue base
+                // Subtle energy gathering glow
+                const energyGlow = anticipationCurve * 0.15;
+                colors[index] = 0.3 + energyGlow;
+                colors[index + 1] = 0.3 + energyGlow * 0.7;
+                colors[index + 2] = 0.8 + energyGlow * 0.3;
                 
-                // Size preparation - slight growth
-                sizes[i] = this.particleSizes[i] + preparationIntensity * 0.02;
+                sizes[i] = this.particleSizes[i] + energyGlow * 0.01;
                 
             } else if (this.stateProgress <= phase2Duration) {
-                // Phase 2: Active Transformation - Elegant wave-based morphing
+                // Phase 2: Preparation Wave - Energy flows through the formation
                 const phase2Progress = (this.stateProgress - phase1Duration) / (phase2Duration - phase1Duration);
                 
-                // Create staggered wave transformation based on distance and individual timing
-                const waveDelay = normalizedDistance * 0.3 + this.particlePhases[i] * 0.1;
-                const adjustedProgress = Math.max(0, Math.min(1, (phase2Progress - waveDelay) / (1 - waveDelay)));
+                // Create a beautiful wave that flows from center outward
+                const waveSpeed = 3.0;
+                const wavePosition = phase2Progress * waveSpeed;
+                const waveInfluence = Math.max(0, 1 - Math.abs(normalizedDistance - wavePosition) * 2);
+                const waveIntensity = Math.sin(waveInfluence * Math.PI) * 0.4;
                 
-                // Use adjusted progress directly for natural movement
+                // Anticipation movement with wave
+                const anticipationFactor = 0.05 * waveIntensity;
+                const directionX = deltaX / Math.max(transformDistance, 0.01);
+                const directionY = deltaY / Math.max(transformDistance, 0.01);
                 
-                // Add curved path interpolation for more organic movement
-                const curveMidX = (startX + endX) * 0.5 + (Math.random() - 0.5) * transformDistance * 0.2;
-                const curveMidY = (startY + endY) * 0.5 + (Math.random() - 0.5) * transformDistance * 0.2;
-                const curveMidZ = (startZ + endZ) * 0.5 + Math.sin(adjustedProgress * Math.PI) * 0.3;
+                positions[index] = startX - directionX * anticipationFactor;
+                positions[index + 1] = startY - directionY * anticipationFactor;
+                positions[index + 2] = startZ + waveIntensity * 0.1;
                 
-                // Bezier curve interpolation for smooth, elegant paths
-                let currentX, currentY, currentZ;
-                if (adjustedProgress <= 0.5) {
-                    const t = adjustedProgress * 2;
-                    currentX = THREE.MathUtils.lerp(startX, curveMidX, t);
-                    currentY = THREE.MathUtils.lerp(startY, curveMidY, t);
-                    currentZ = THREE.MathUtils.lerp(startZ, curveMidZ, t);
+                // Dynamic color wave
+                const waveColor = waveIntensity * 0.5;
+                colors[index] = 0.3 + waveColor;
+                colors[index + 1] = 0.3 + waveColor * 0.8;
+                colors[index + 2] = 0.8 + waveColor * 0.4;
+                
+                // Size pulsing with wave
+                sizes[i] = this.particleSizes[i] + waveIntensity * 0.03;
+                
+            } else if (this.stateProgress <= phase3Duration) {
+                // Phase 3: Main Transformation - Ultra-smooth morphing with advanced curves
+                const phase3Progress = (this.stateProgress - phase2Duration) / (phase3Duration - phase2Duration);
+                
+                // Staggered start times based on distance and individual characteristics
+                const delayFactor = normalizedDistance * 0.2 + particleVariation * 0.1;
+                const adjustedProgress = Math.max(0, Math.min(1, (phase3Progress - delayFactor) / (1 - delayFactor * 0.8)));
+                
+                // Ultra-smooth easing for the main transformation
+                const smoothProgress = this.ultraSmoothEasing(adjustedProgress);
+                
+                // Advanced Bézier curve with multiple control points for organic paths
+                const controlPoint1X = startX + deltaX * 0.3 + Math.sin(angle + Math.PI * 0.5) * transformDistance * 0.15;
+                const controlPoint1Y = startY + deltaY * 0.3 + Math.cos(angle + Math.PI * 0.5) * transformDistance * 0.15;
+                const controlPoint1Z = startZ + Math.sin(smoothProgress * Math.PI) * 0.4;
+                
+                const controlPoint2X = startX + deltaX * 0.7 + Math.sin(angle - Math.PI * 0.3) * transformDistance * 0.1;
+                const controlPoint2Y = startY + deltaY * 0.7 + Math.cos(angle - Math.PI * 0.3) * transformDistance * 0.1;
+                const controlPoint2Z = startZ + deltaZ * 0.7 + Math.sin(smoothProgress * Math.PI * 1.5) * 0.2;
+                
+                // Cubic Bézier interpolation for ultra-smooth paths
+                const currentPos = this.cubicBezierInterpolation(
+                    { x: startX, y: startY, z: startZ },
+                    { x: controlPoint1X, y: controlPoint1Y, z: controlPoint1Z },
+                    { x: controlPoint2X, y: controlPoint2Y, z: controlPoint2Z },
+                    { x: endX, y: endY, z: endZ },
+                    smoothProgress
+                );
+                
+                // Add organic flow effects
+                const flowPhase = smoothProgress * Math.PI * 2 + particlePhase;
+                const flowIntensity = Math.sin(flowPhase) * 0.05 * (1 - smoothProgress);
+                const flowDirection = angle + Math.PI * 0.5;
+                
+                positions[index] = currentPos.x + Math.cos(flowDirection) * flowIntensity;
+                positions[index + 1] = currentPos.y + Math.sin(flowDirection) * flowIntensity;
+                positions[index + 2] = currentPos.z;
+                
+                // Advanced color transformation with smooth gradients
+                const colorProgress = smoothProgress;
+                const energyIntensity = Math.sin(colorProgress * Math.PI) * 0.6;
+                
+                // Color journey: Twilight -> Bright Energy -> Destination Twilight
+                if (colorProgress <= 0.3) {
+                    // Initial energy buildup
+                    const buildupProgress = colorProgress / 0.3;
+                    colors[index] = 0.3 + buildupProgress * 0.4 + energyIntensity * 0.3;
+                    colors[index + 1] = 0.3 + buildupProgress * 0.3 + energyIntensity * 0.4;
+                    colors[index + 2] = 0.8 + buildupProgress * 0.2;
+                } else if (colorProgress <= 0.7) {
+                    // Peak energy phase
+                    const peakProgress = (colorProgress - 0.3) / 0.4;
+                    const peakIntensity = Math.sin(peakProgress * Math.PI) * 0.8;
+                    colors[index] = 0.6 + peakIntensity * 0.4;
+                    colors[index + 1] = 0.5 + peakIntensity * 0.5;
+                    colors[index + 2] = 1.0;
                 } else {
-                    const t = (adjustedProgress - 0.5) * 2;
-                    currentX = THREE.MathUtils.lerp(curveMidX, endX, t);
-                    currentY = THREE.MathUtils.lerp(curveMidY, endY, t);
-                    currentZ = THREE.MathUtils.lerp(curveMidZ, endZ, t);
+                    // Gentle transition to final colors
+                    const finalProgress = (colorProgress - 0.7) / 0.3;
+                    const finalEase = this.ultraSmoothEasing(finalProgress);
+                    const targetColor = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8];
+                    
+                    colors[index] = THREE.MathUtils.lerp(0.8, targetColor[0], finalEase);
+                    colors[index + 1] = THREE.MathUtils.lerp(0.8, targetColor[1], finalEase);
+                    colors[index + 2] = THREE.MathUtils.lerp(1.0, targetColor[2], finalEase);
                 }
                 
-                // Add transformation flow effects
-                const flowIntensity = Math.sin(adjustedProgress * Math.PI) * 0.1;
-                const flowDirection = Math.atan2(deltaY, deltaX);
-                const flowX = Math.cos(flowDirection) * flowIntensity;
-                const flowY = Math.sin(flowDirection) * flowIntensity;
-                
-                positions[index] = currentX + flowX;
-                positions[index + 1] = currentY + flowY;
-                positions[index + 2] = currentZ;
-                
-                // Dynamic color transformation: Purple -> Electric Blue -> Deep Twilight
-                const colorPhase = adjustedProgress * Math.PI;
-                const transformationGlow = Math.sin(colorPhase) * 0.4;
-                
-                if (adjustedProgress <= 0.5) {
-                    // Purple to Electric Blue
-                    const blueTransition = adjustedProgress * 2;
-                    colors[index] = 0.5 - blueTransition * 0.3; // r: reduce purple
-                    colors[index + 1] = 0.3 + blueTransition * 0.4; // g: increase for blue
-                    colors[index + 2] = 0.8 + blueTransition * 0.2; // b: enhance blue
-                } else {
-                    // Electric Blue to Deep Twilight
-                    const twilightTransition = (adjustedProgress - 0.5) * 2;
-                    colors[index] = 0.2 + twilightTransition * 0.4; // r: return to purple
-                    colors[index + 1] = 0.7 - twilightTransition * 0.4; // g: reduce for twilight
-                    colors[index + 2] = 1.0; // b: maintain deep blue
-                }
-                
-                // Add transformation energy to colors
-                colors[index] += transformationGlow * 0.2;
-                colors[index + 1] += transformationGlow * 0.15;
-                colors[index + 2] += transformationGlow * 0.1;
-                
-                // Dynamic size during transformation
-                const sizeFlow = Math.sin(adjustedProgress * Math.PI * 2) * 0.06;
-                sizes[i] = this.particleSizes[i] + transformationGlow * 0.08 + sizeFlow;
+                // Dynamic size with organic pulsing
+                const sizePulse = Math.sin(colorProgress * Math.PI * 3 + particlePhase) * 0.02;
+                sizes[i] = this.particleSizes[i] + energyIntensity * 0.04 + sizePulse;
                 
             } else {
-                // Phase 3: Elegant Settlement - Smooth arrival at final positions
-                const phase3Progress = (this.stateProgress - phase2Duration) / (phase3Duration - phase2Duration);
-                const settlementEase = this.easeInOutCubic(phase3Progress);
+                // Phase 4: Final Settlement - Perfect arrival
+                const phase4Progress = (this.stateProgress - phase3Duration) / (phase4Duration - phase3Duration);
+                const settlementEase = this.ultraSmoothEasing(phase4Progress);
                 
-                // Final position refinement
+                // Perfect final positioning
                 positions[index] = endX;
                 positions[index + 1] = endY;
                 positions[index + 2] = endZ;
                 
-                // Gentle color restoration to twilight colors
-                const colorRestoration = settlementEase;
-                const finalTwilight = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8]; // Alternate blue/purple
-                colors[index] = THREE.MathUtils.lerp(colors[index], finalTwilight[0], colorRestoration * 0.6);
-                colors[index + 1] = THREE.MathUtils.lerp(colors[index + 1], finalTwilight[1], colorRestoration * 0.6);
-                colors[index + 2] = THREE.MathUtils.lerp(colors[index + 2], finalTwilight[2], colorRestoration * 0.6);
+                // Gentle restoration to final twilight palette
+                const finalColor = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8];
+                colors[index] = THREE.MathUtils.lerp(colors[index], finalColor[0], settlementEase * 0.8);
+                colors[index + 1] = THREE.MathUtils.lerp(colors[index + 1], finalColor[1], settlementEase * 0.8);
+                colors[index + 2] = THREE.MathUtils.lerp(colors[index + 2], finalColor[2], settlementEase * 0.8);
                 
                 // Size normalization
                 sizes[i] = THREE.MathUtils.lerp(sizes[i], this.particleSizes[i], settlementEase);
@@ -725,7 +936,7 @@ class ParticleAnimation {
         this.particles.geometry.attributes.size.needsUpdate = true;
         
         if (this.stateProgress >= 1) {
-            console.log('Elegant morphing complete, starting dissipation');
+            console.log('Ultra-elegant morphing complete, starting dissipation');
             this.transitionToState(ANIMATION_STATES.DISSIPATING);
         }
     }
@@ -736,6 +947,32 @@ class ParticleAnimation {
         const cubic = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         const sine = Math.sin(t * Math.PI * 0.5);
         return (cubic * 0.7 + sine * 0.3); // Blend for optimal elegance
+    }
+    
+    // Ultra-smooth easing for the most elegant transitions
+    ultraSmoothEasing(t) {
+        // Perfect S-curve with zero velocity at endpoints
+        // Uses a combination of smoothstep and improved smoothstep functions
+        const smoothstep = t * t * (3 - 2 * t);
+        const smootherstep = t * t * t * (t * (t * 6 - 15) + 10);
+        
+        // Blend for ultimate smoothness
+        return smoothstep * 0.3 + smootherstep * 0.7;
+    }
+    
+    // Cubic Bézier interpolation for organic particle paths
+    cubicBezierInterpolation(p0, p1, p2, p3, t) {
+        const oneMinusT = 1 - t;
+        const oneMinusT2 = oneMinusT * oneMinusT;
+        const oneMinusT3 = oneMinusT2 * oneMinusT;
+        const t2 = t * t;
+        const t3 = t2 * t;
+        
+        return {
+            x: oneMinusT3 * p0.x + 3 * oneMinusT2 * t * p1.x + 3 * oneMinusT * t2 * p2.x + t3 * p3.x,
+            y: oneMinusT3 * p0.y + 3 * oneMinusT2 * t * p1.y + 3 * oneMinusT * t2 * p2.y + t3 * p3.y,
+            z: oneMinusT3 * p0.z + 3 * oneMinusT2 * t * p1.z + 3 * oneMinusT * t2 * p2.z + t3 * p3.z
+        };
     }
     
     updateDissipatingState() {
@@ -783,18 +1020,149 @@ class ParticleAnimation {
     }
     
     setupEventListeners() {
-        document.getElementById('startButton').addEventListener('click', () => {
+        const startButton = document.getElementById('startButton');
+        const infoToggle = document.getElementById('infoToggle');
+        const controls = document.getElementById('controls');
+        const canvas = this.renderer.domElement;
+        
+        startButton.addEventListener('click', () => {
             this.startNewAnimationSequence();
+        });
+        
+        // Info toggle functionality
+        infoToggle.addEventListener('click', () => {
+            controls.classList.toggle('visible');
+        });
+        
+        // Mouse/touch interaction
+        const updateMousePosition = (clientX, clientY) => {
+            const rect = canvas.getBoundingClientRect();
+            this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        };
+        
+        // Mouse events
+        canvas.addEventListener('mousemove', (e) => {
+            updateMousePosition(e.clientX, e.clientY);
+            this.updateMouseForce();
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            this.mouse.isDown = true;
+            updateMousePosition(e.clientX, e.clientY);
+            
+            // Add emission point when clicking
+            if (this.emissionEnabled) {
+                const worldX = this.mouse.x * 4;
+                const worldY = this.mouse.y * 4;
+                this.addEmissionPoint(worldX, worldY, 0);
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            this.mouse.isDown = false;
+            this.mouseForce.strength = 0;
+        });
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            updateMousePosition(touch.clientX, touch.clientY);
+            this.updateMouseForce();
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.mouse.isDown = true;
+            const touch = e.touches[0];
+            updateMousePosition(touch.clientX, touch.clientY);
+        });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.mouse.isDown = false;
+            this.mouseForce.strength = 0;
+        });
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'a':
+                    this.attractionMode = !this.attractionMode;
+                    console.log('Attraction mode:', this.attractionMode ? 'ON' : 'OFF');
+                    break;
+                case '1':
+                    this.setColorScheme('twilight');
+                    break;
+                case '2':
+                    this.setColorScheme('neon');
+                    break;
+                case '3':
+                    this.setColorScheme('fire');
+                    break;
+                case '4':
+                    this.setColorScheme('forest');
+                    break;
+                case '5':
+                    this.setColorScheme('ocean');
+                    break;
+                case 'r':
+                    this.resetAnimation();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    this.togglePause();
+                    break;
+                case 'm':
+                    this.toggleAudio();
+                    break;
+                case 'e':
+                    this.toggleEmission();
+                    break;
+                case 'p':
+                    this.togglePerformanceMode();
+                    break;
+            }
+        });
+        
+        // Mouse wheel for zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this.zoomLevel += e.deltaY * -0.001;
+            this.zoomLevel = Math.max(0.5, Math.min(3.0, this.zoomLevel));
+            this.camera.position.z = 5 / this.zoomLevel;
         });
     }
     
     animate() {
         requestAnimationFrame(() => this.animate());
         
-        // 移除旋转，让粒子保持静止直到动画开始
-        // if (this.particles) {
-        //     this.particles.rotation.z += 0.001;
-        // }
+        this.frameCount++;
+        
+        // Apply interactive forces and physics when particles exist
+        if (this.particles) {
+            // Performance optimization - skip some updates in performance mode
+            const shouldUpdate = !this.performanceMode || this.frameCount % 2 === 0;
+            
+            if (shouldUpdate) {
+                this.applyInteractiveForces();
+                this.applyAudioReactive();
+                this.updateEmissionSystem();
+            }
+            
+            // Only apply physics during certain states to avoid interfering with main animation
+            if (this.currentState === ANIMATION_STATES.DISSIPATING || 
+                !this.isAnimating || 
+                this.currentState === ANIMATION_STATES.INITIAL_SPREAD) {
+                if (shouldUpdate) {
+                    this.applyPhysics();
+                }
+            }
+        }
+        
+        // Update camera for smooth movement
+        this.updateCamera();
         
         this.renderer.render(this.scene, this.camera);
     }
@@ -877,6 +1245,435 @@ class ParticleAnimation {
         }
         
         return positions;
+    }
+    
+    // Interactive mouse force calculation
+    updateMouseForce() {
+        if (!this.mouse.isDown) {
+            this.mouseForce.strength *= 0.95; // Gradual decay
+            return;
+        }
+        
+        // Convert mouse coordinates to world space
+        const mouseWorld = {
+            x: this.mouse.x * 4, // Adjust scale to match particle space
+            y: this.mouse.y * 4,
+            z: 0
+        };
+        
+        this.mouseForce.x = mouseWorld.x;
+        this.mouseForce.y = mouseWorld.y;
+        this.mouseForce.strength = this.forceStrength;
+    }
+    
+    // Apply interactive forces to particles
+    applyInteractiveForces() {
+        if (!this.particles || this.mouseForce.strength < 0.001) return;
+        
+        const positions = this.particles.geometry.attributes.position.array;
+        const colors = this.particles.geometry.attributes.color.array;
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const index = i * 3;
+            const px = positions[index];
+            const py = positions[index + 1];
+            const pz = positions[index + 2];
+            
+            // Calculate distance to mouse
+            const dx = this.mouseForce.x - px;
+            const dy = this.mouseForce.y - py;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < this.interactionRadius) {
+                const influence = 1 - (distance / this.interactionRadius);
+                const forceMultiplier = this.attractionMode ? 1 : -1;
+                
+                // Apply force
+                const force = this.mouseForce.strength * influence * forceMultiplier;
+                const forceX = (dx / distance) * force;
+                const forceY = (dy / distance) * force;
+                
+                // Update velocities
+                this.particleVelocities[index] += forceX;
+                this.particleVelocities[index + 1] += forceY;
+                
+                // Color feedback based on interaction
+                const colorIntensity = influence * 0.3;
+                colors[index] = Math.min(1, colors[index] + colorIntensity);
+                colors[index + 1] = Math.min(1, colors[index + 1] + colorIntensity * 0.5);
+                colors[index + 2] = Math.min(1, colors[index + 2] + colorIntensity * 0.2);
+            }
+        }
+        
+        this.particles.geometry.attributes.color.needsUpdate = true;
+    }
+    
+    // Enhanced physics simulation
+    applyPhysics() {
+        if (!this.particles) return;
+        
+        const positions = this.particles.geometry.attributes.position.array;
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const index = i * 3;
+            
+            // Apply gravity
+            this.particleVelocities[index] += this.gravity.x;
+            this.particleVelocities[index + 1] += this.gravity.y;
+            this.particleVelocities[index + 2] += this.gravity.z;
+            
+            // Apply wind force
+            this.particleVelocities[index] += this.windForce.x;
+            this.particleVelocities[index + 1] += this.windForce.y;
+            this.particleVelocities[index + 2] += this.windForce.z;
+            
+            // Add turbulence
+            const turbX = (Math.random() - 0.5) * this.turbulence;
+            const turbY = (Math.random() - 0.5) * this.turbulence;
+            const turbZ = (Math.random() - 0.5) * this.turbulence;
+            
+            this.particleVelocities[index] += turbX;
+            this.particleVelocities[index + 1] += turbY;
+            this.particleVelocities[index + 2] += turbZ;
+            
+            // Apply velocity damping
+            this.particleVelocities[index] *= 0.98;
+            this.particleVelocities[index + 1] *= 0.98;
+            this.particleVelocities[index + 2] *= 0.98;
+            
+            // Update positions
+            positions[index] += this.particleVelocities[index];
+            positions[index + 1] += this.particleVelocities[index + 1];
+            positions[index + 2] += this.particleVelocities[index + 2];
+        }
+        
+        this.particles.geometry.attributes.position.needsUpdate = true;
+    }
+    
+    // Color scheme management
+    setColorScheme(scheme) {
+        if (!this.colorSchemes[scheme] || !this.particles) return;
+        
+        this.colorScheme = scheme;
+        const colors = this.particles.geometry.attributes.color.array;
+        const [color1, color2] = this.colorSchemes[scheme];
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const variation = Math.random();
+            const color = variation < 0.6 ? color1 : color2;
+            
+            colors[i * 3] = color[0] + (Math.random() - 0.5) * 0.2;
+            colors[i * 3 + 1] = color[1] + (Math.random() - 0.5) * 0.2;
+            colors[i * 3 + 2] = color[2] + (Math.random() - 0.5) * 0.2;
+        }
+        
+        this.particles.geometry.attributes.color.needsUpdate = true;
+        console.log(`Color scheme changed to: ${scheme}`);
+    }
+    
+    // Animation control methods
+    resetAnimation() {
+        if (!this.particles) return;
+        
+        this.isAnimating = false;
+        this.currentState = ANIMATION_STATES.INITIAL_SPREAD;
+        this.stateProgress = 0;
+        this.globalTime = 0;
+        
+        // Reset velocities
+        for (let i = 0; i < this.particleVelocities.length; i++) {
+            this.particleVelocities[i] = 0;
+        }
+        
+        // Reset positions to spread
+        const positions = this.particles.geometry.attributes.position.array;
+        for (let i = 0; i < this.particleCount; i++) {
+            positions[i * 3] = this.spreadPositions[i * 3];
+            positions[i * 3 + 1] = this.spreadPositions[i * 3 + 1];
+            positions[i * 3 + 2] = this.spreadPositions[i * 3 + 2];
+        }
+        
+        this.particles.geometry.attributes.position.needsUpdate = true;
+        console.log('Animation reset');
+    }
+    
+    togglePause() {
+        this.isAnimating = !this.isAnimating;
+        if (this.isAnimating) {
+            this.animateState();
+        }
+        console.log('Animation', this.isAnimating ? 'resumed' : 'paused');
+    }
+    
+    // Smooth camera movement
+    updateCamera() {
+        if (!this.camera) return;
+        
+        // Smooth camera interpolation
+        this.camera.position.x += (this.cameraTarget.x - this.camera.position.x) * this.cameraSpeed;
+        this.camera.position.y += (this.cameraTarget.y - this.camera.position.y) * this.cameraSpeed;
+        this.camera.position.z += (this.cameraTarget.z - this.camera.position.z) * this.cameraSpeed;
+    }
+    
+    // Audio reactive functionality
+    async initAudio() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            const source = this.audioContext.createMediaStreamSource(stream);
+            
+            this.analyser.fftSize = 256;
+            this.audioData = new Uint8Array(this.analyser.frequencyBinCount);
+            source.connect(this.analyser);
+            
+            this.audioEnabled = true;
+            console.log('Audio reactive mode enabled');
+        } catch (error) {
+            console.error('Failed to initialize audio:', error);
+        }
+    }
+    
+    toggleAudio() {
+        if (!this.audioEnabled) {
+            this.initAudio();
+        } else {
+            if (this.audioContext) {
+                this.audioContext.close();
+                this.audioContext = null;
+                this.analyser = null;
+                this.audioData = null;
+            }
+            this.audioEnabled = false;
+            console.log('Audio reactive mode disabled');
+        }
+    }
+    
+    updateAudioData() {
+        if (!this.audioEnabled || !this.analyser) return;
+        
+        this.analyser.getByteFrequencyData(this.audioData);
+        
+        // Calculate frequency bands
+        const bassEnd = Math.floor(this.audioData.length * 0.1);
+        const midEnd = Math.floor(this.audioData.length * 0.5);
+        
+        this.bassFrequency = 0;
+        this.midFrequency = 0;
+        this.trebleFrequency = 0;
+        
+        // Bass frequencies (0-10%)
+        for (let i = 0; i < bassEnd; i++) {
+            this.bassFrequency += this.audioData[i];
+        }
+        this.bassFrequency /= bassEnd;
+        
+        // Mid frequencies (10-50%)
+        for (let i = bassEnd; i < midEnd; i++) {
+            this.midFrequency += this.audioData[i];
+        }
+        this.midFrequency /= (midEnd - bassEnd);
+        
+        // Treble frequencies (50-100%)
+        for (let i = midEnd; i < this.audioData.length; i++) {
+            this.trebleFrequency += this.audioData[i];
+        }
+        this.trebleFrequency /= (this.audioData.length - midEnd);
+        
+        // Normalize values
+        this.bassFrequency /= 255;
+        this.midFrequency /= 255;
+        this.trebleFrequency /= 255;
+    }
+    
+    applyAudioReactive() {
+        if (!this.audioEnabled || !this.particles) return;
+        
+        this.updateAudioData();
+        
+        const colors = this.particles.geometry.attributes.color.array;
+        const sizes = this.particles.geometry.attributes.size.array;
+        
+        // Audio-reactive color modulation
+        const bassIntensity = this.bassFrequency * 0.5;
+        const midIntensity = this.midFrequency * 0.3;
+        const trebleIntensity = this.trebleFrequency * 0.2;
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const index = i * 3;
+            
+            // Modulate colors based on frequency bands
+            const originalColors = this.colorSchemes[this.colorScheme];
+            const color = i % 2 === 0 ? originalColors[0] : originalColors[1];
+            
+            colors[index] = Math.min(1, color[0] + bassIntensity);
+            colors[index + 1] = Math.min(1, color[1] + midIntensity);
+            colors[index + 2] = Math.min(1, color[2] + trebleIntensity);
+            
+            // Size modulation based on overall audio intensity
+            const audioIntensity = (this.bassFrequency + this.midFrequency + this.trebleFrequency) / 3;
+            sizes[i] = this.particleSizes[i] + audioIntensity * 0.1;
+        }
+        
+        this.particles.geometry.attributes.color.needsUpdate = true;
+        this.particles.geometry.attributes.size.needsUpdate = true;
+        
+        // Camera shake on bass hits
+        if (this.bassFrequency > 0.7) {
+            this.cameraTarget.x += (Math.random() - 0.5) * 0.1;
+            this.cameraTarget.y += (Math.random() - 0.5) * 0.1;
+        }
+    }
+    
+    // Particle emission system
+    toggleEmission() {
+        this.emissionEnabled = !this.emissionEnabled;
+        if (!this.emissionEnabled) {
+            this.emissionPoints = [];
+        }
+        console.log('Particle emission:', this.emissionEnabled ? 'enabled' : 'disabled');
+    }
+    
+    addEmissionPoint(x, y, z) {
+        if (this.emissionPoints.length >= 10) return; // Max 10 emission points
+        
+        this.emissionPoints.push({
+            x: x,
+            y: y,
+            z: z,
+            life: 3000, // 3 seconds
+            particles: []
+        });
+    }
+    
+    updateEmissionSystem() {
+        if (!this.emissionEnabled || !this.particles) return;
+        
+        const positions = this.particles.geometry.attributes.position.array;
+        const colors = this.particles.geometry.attributes.color.array;
+        const sizes = this.particles.geometry.attributes.size.array;
+        
+        // Update emission points
+        for (let i = this.emissionPoints.length - 1; i >= 0; i--) {
+            const point = this.emissionPoints[i];
+            point.life -= 16; // ~60fps
+            
+            if (point.life <= 0) {
+                this.emissionPoints.splice(i, 1);
+                continue;
+            }
+            
+            // Emit new particles
+            if (Math.random() < this.emissionRate / 100) {
+                this.emitParticle(point);
+            }
+            
+            // Update emitted particles
+            for (let j = point.particles.length - 1; j >= 0; j--) {
+                const particle = point.particles[j];
+                particle.life -= 16;
+                
+                if (particle.life <= 0) {
+                    point.particles.splice(j, 1);
+                    continue;
+                }
+                
+                // Update particle position
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.z += particle.vz;
+                
+                // Apply gravity
+                particle.vy -= 0.002;
+                
+                // Update visual representation if within particle count
+                if (particle.index < this.particleCount) {
+                    const index = particle.index * 3;
+                    positions[index] = particle.x;
+                    positions[index + 1] = particle.y;
+                    positions[index + 2] = particle.z;
+                    
+                    // Fade out over time
+                    const alpha = particle.life / 2000;
+                    colors[index] *= alpha;
+                    colors[index + 1] *= alpha;
+                    colors[index + 2] *= alpha;
+                    
+                    sizes[particle.index] = this.particleSizes[particle.index] * alpha;
+                }
+            }
+        }
+        
+        this.particles.geometry.attributes.position.needsUpdate = true;
+        this.particles.geometry.attributes.color.needsUpdate = true;
+        this.particles.geometry.attributes.size.needsUpdate = true;
+    }
+    
+    emitParticle(point) {
+        // Find available particle slot
+        let availableIndex = -1;
+        for (let i = 0; i < this.particleCount; i++) {
+            let occupied = false;
+            for (const emissionPoint of this.emissionPoints) {
+                if (emissionPoint.particles.some(p => p.index === i)) {
+                    occupied = true;
+                    break;
+                }
+            }
+            if (!occupied) {
+                availableIndex = i;
+                break;
+            }
+        }
+        
+        if (availableIndex === -1) return; // No available slots
+        
+        const velocity = 0.05;
+        const angle = Math.random() * Math.PI * 2;
+        const elevation = (Math.random() - 0.5) * Math.PI;
+        
+        point.particles.push({
+            index: availableIndex,
+            x: point.x,
+            y: point.y,
+            z: point.z,
+            vx: Math.cos(angle) * Math.cos(elevation) * velocity,
+            vy: Math.sin(elevation) * velocity,
+            vz: Math.sin(angle) * Math.cos(elevation) * velocity,
+            life: 2000 // 2 seconds
+        });
+    }
+    
+    // Performance optimization methods
+    togglePerformanceMode() {
+        this.performanceMode = !this.performanceMode;
+        
+        if (this.performanceMode) {
+            // Reduce particle count and quality for better performance
+            this.particleCount = Math.floor(this.particleCount * 0.6);
+            this.turbulence *= 0.5;
+            this.emissionRate = Math.max(1, this.emissionRate * 0.5);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio * 0.8, 1));
+        } else {
+            // Restore original settings
+            this.particleCount = Math.floor(this.particleCount / 0.6);
+            this.turbulence *= 2;
+            this.emissionRate = Math.min(10, this.emissionRate * 2);
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+        }
+        
+        console.log('Performance mode:', this.performanceMode ? 'enabled' : 'disabled');
+        console.log('Particle count adjusted to:', this.particleCount);
+    }
+    
+    getPerformanceStats() {
+        return {
+            particleCount: this.particleCount,
+            emissionPoints: this.emissionPoints.length,
+            audioEnabled: this.audioEnabled,
+            performanceMode: this.performanceMode,
+            frameCount: this.frameCount
+        };
     }
 }
 
