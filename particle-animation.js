@@ -1017,7 +1017,7 @@ class ParticleAnimation {
         }
     }
     
-    // Stage 1: 极简优雅聚合 - 丝滑流畅的有机收敛
+    // Stage 1: 引力场式优雅汇聚 - 螺旋引力场汇聚到X形状
     updateConvergingState() {
         const duration = STAGE_DURATIONS.CONVERGING;
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
@@ -1027,75 +1027,62 @@ class ParticleAnimation {
         const colors = this.particles.geometry.attributes.color.array;
         const sizes = this.particles.geometry.attributes.size.array;
 
-        // 全局时间用于有机效果
-        const time = this.globalTime * 0.001;
+        // 计算X形状的中心点
+        const xCenter = { x: 0, y: 0, z: 0 };
 
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
 
-            // 粒子基础属性
-            const particleSeed = this.particleSeeds[i];
-            const energy = this.particleEnergies[i];
-            
-            // 起始和目标位置
-            const startX = this.spreadPositions[index];
-            const startY = this.spreadPositions[index + 1];
-            const startZ = this.spreadPositions[index + 2];
-            
-            const targetX = this.positions1[index];
-            const targetY = this.positions1[index + 1];
-            const targetZ = this.positions1[index + 2];
+            // 获取起始位置和目标位置
+            const startPos = {
+                x: this.spreadPositions[index],
+                y: this.spreadPositions[index + 1],
+                z: this.spreadPositions[index + 2]
+            };
+            const targetPos = {
+                x: this.positions1[index],
+                y: this.positions1[index + 1],
+                z: this.positions1[index + 2]
+            };
 
-            // 波浪式延迟：基于距离中心的自然传播
-            const distanceFromCenter = Math.sqrt(startX * startX + startY * startY);
-            const normalizedDistance = Math.min(distanceFromCenter / 3, 1);
-            const waveDelay = normalizedDistance * 0.3; // 30%的延迟范围
-            
-            // 个体进度计算
-            const adjustedProgress = Math.max(0, Math.min(1, (this.stateProgress - waveDelay) / (1 - waveDelay)));
-            
-            // 使用三次贝塞尔缓动创造丝滑效果
-            const smoothProgress = this.createSilkyEasing(adjustedProgress);
+            // 计算粒子到X中心的距离，用于分层时间控制
+            const distanceFromCenter = Math.sqrt(
+                startPos.x * startPos.x + startPos.y * startPos.y + startPos.z * startPos.z
+            );
 
-            // 优雅的贝塞尔路径 - 轻微弧度增加自然感
-            const midPointOffset = 0.2 + Math.sin(particleSeed * 6.28) * 0.1;
-            const controlX = (startX + targetX) / 2 + Math.sin(Math.atan2(targetY - startY, targetX - startX) + Math.PI * 0.5) * midPointOffset;
-            const controlY = (startY + targetY) / 2 + Math.cos(Math.atan2(targetY - startY, targetX - startX) + Math.PI * 0.5) * midPointOffset;
-            const controlZ = (startZ + targetZ) / 2 + Math.sin(smoothProgress * Math.PI) * 0.1;
+            // 分层时间控制：外层粒子提前启动，创造引力波效果
+            const layeredTiming = this.calculateLayeredTiming(distanceFromCenter, this.stateProgress);
+            const { phase, localProgress, intensity } = layeredTiming;
 
-            // 二次贝塞尔插值
-            const t = smoothProgress;
-            const invT = 1 - t;
-            positions[index] = invT * invT * startX + 2 * invT * t * controlX + t * t * targetX;
-            positions[index + 1] = invT * invT * startY + 2 * invT * t * controlY + t * t * targetY;
-            positions[index + 2] = invT * invT * startZ + 2 * invT * t * controlZ + t * t * targetZ;
-
-            // 轻微的有机呼吸效果
-            const breathingIntensity = (1 - smoothProgress) * 0.01; // 聚合时逐渐减弱
-            const breathingPhase = time * 2 + particleSeed * 3.14;
-            positions[index] += Math.sin(breathingPhase) * breathingIntensity;
-            positions[index + 1] += Math.cos(breathingPhase * 1.1) * breathingIntensity;
-            positions[index + 2] += Math.sin(breathingPhase * 0.8) * breathingIntensity * 0.5;
-
-            // 丝滑的颜色觉醒 - 从深暗到明亮
-            const colorIntensity = this.createSilkyEasing(smoothProgress);
-            const breathingGlow = Math.sin(time * 3 + particleSeed) * 0.1 + 0.9; // 轻微脉冲
+            // 根据当前阶段计算位置
+            let currentPos = { x: startPos.x, y: startPos.y, z: startPos.z };
             
-            // 优雅的蓝紫色渐变
-            const baseR = 0.2 + colorIntensity * 0.3;
-            const baseG = 0.3 + colorIntensity * 0.4;
-            const baseB = 0.7 + colorIntensity * 0.3;
-            
-            colors[index] = baseR * breathingGlow * energy;
-            colors[index + 1] = baseG * breathingGlow * energy;
-            colors[index + 2] = baseB * breathingGlow * energy;
+            if (phase >= 1) {
+                // 计算螺旋汇聚路径
+                const spiralData = this.generateSpiralConvergence(startPos, targetPos, localProgress, distanceFromCenter);
+                currentPos = spiralData.position;
+                
+                // 应用引力场效果
+                const gravityEffect = this.calculateGravitationalField(currentPos, targetPos, localProgress);
+                currentPos.x += gravityEffect.x;
+                currentPos.y += gravityEffect.y;
+                currentPos.z += gravityEffect.z;
+            }
 
-            // 有机的大小变化 - 生命力觉醒效果
-            const sizeGrowth = this.createSilkyEasing(smoothProgress);
-            const sizePulse = Math.sin(time * 2.5 + particleSeed * 2) * 0.05 + 0.95; // 轻微脉冲
-            const finalSize = (0.4 + sizeGrowth * 0.6) * sizePulse * energy;
-            
-            sizes[i] = this.particleSizes[i] * finalSize;
+            // 设置粒子位置
+            positions[index] = currentPos.x;
+            positions[index + 1] = currentPos.y;
+            positions[index + 2] = currentPos.z;
+
+            // 优雅的颜色过渡
+            const color = this.getConvergenceColor(localProgress, intensity, phase);
+            colors[index] = color.r;
+            colors[index + 1] = color.g;
+            colors[index + 2] = color.b;
+
+            // 优雅的大小变化
+            const sizeMultiplier = this.calculateConvergenceSize(localProgress, intensity, phase);
+            sizes[i] = this.particleSizes[i] * sizeMultiplier;
         }
 
         // 更新几何体
@@ -1103,26 +1090,159 @@ class ParticleAnimation {
         this.particles.geometry.attributes.color.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
 
-        // 平滑过渡到下一阶段
-        if (this.stateProgress >= 0.95) {
+        // 平滑过渡到呼吸阶段
+        if (this.stateProgress >= 0.98) {
             if (this.currentState === ANIMATION_STATES.CONVERGING) {
-                console.log('Silky convergence complete - elegant X formation achieved');
+                console.log('Gravitational convergence complete, starting breathing phase');
                 this.transitionToState(ANIMATION_STATES.X_BREATHING);
             }
         }
     }
 
-    // 创造丝滑的缓动效果
-    createSilkyEasing(t) {
-        // 使用三次贝塞尔曲线 (0.25, 0.46, 0.45, 0.94) 创造丝滑效果
-        if (t <= 0) return 0;
-        if (t >= 1) return 1;
+    // 计算分层时间控制
+    calculateLayeredTiming(distanceFromCenter, globalProgress) {
+        // 归一化距离 (0-1)
+        const normalizedDistance = Math.min(distanceFromCenter / 6, 1);
         
-        // 近似贝塞尔曲线的丝滑缓动
-        return t * t * (3 - 2 * t) * (1 + 0.3 * Math.sin(t * Math.PI));
+        // 外层粒子提前启动，创造引力波效果
+        const startDelay = normalizedDistance * 0.3; // 最大30%的提前启动
+        const adjustedProgress = Math.max(0, globalProgress + startDelay - normalizedDistance * 0.2);
+        
+        // 三个阶段的时间分配
+        const phase1End = 0.3;  // 引力觉醒
+        const phase2End = 0.7;  // 螺旋汇聚
+        const phase3End = 1.0;  // 精确定位
+        
+        let phase = 0;
+        let localProgress = 0;
+        let intensity = 0;
+        
+        if (adjustedProgress <= phase1End) {
+            // 阶段1：引力觉醒
+            phase = 1;
+            localProgress = adjustedProgress / phase1End;
+            intensity = this.smoothConvergenceEasing(localProgress) * 0.3;
+        } else if (adjustedProgress <= phase2End) {
+            // 阶段2：螺旋汇聚
+            phase = 2;
+            localProgress = (adjustedProgress - phase1End) / (phase2End - phase1End);
+            intensity = 0.3 + this.smoothConvergenceEasing(localProgress) * 0.5;
+        } else {
+            // 阶段3：精确定位
+            phase = 3;
+            localProgress = (adjustedProgress - phase2End) / (phase3End - phase2End);
+            intensity = 0.8 + this.smoothConvergenceEasing(localProgress) * 0.2;
+        }
+        
+        return { phase, localProgress, intensity };
     }
 
+    // 生成螺旋汇聚路径
+    generateSpiralConvergence(start, target, progress, distanceFromCenter) {
+        // 螺旋参数基于距离
+        const spiralRadius = (distanceFromCenter / 6) * (1 - progress) * 0.8;
+        const spiralTurns = 2 + (distanceFromCenter / 6); // 外层粒子更多转数
+        
+        // 计算螺旋角度
+        const angle = progress * spiralTurns * Math.PI * 2;
+        
+        // 基础线性插值
+        const baseX = start.x + (target.x - start.x) * progress;
+        const baseY = start.y + (target.y - start.y) * progress;
+        const baseZ = start.z + (target.z - start.z) * progress;
+        
+        // 添加螺旋偏移
+        const spiralX = Math.cos(angle) * spiralRadius;
+        const spiralY = Math.sin(angle) * spiralRadius;
+        const spiralZ = Math.sin(angle * 0.5) * spiralRadius * 0.3;
+        
+        return {
+            position: {
+                x: baseX + spiralX,
+                y: baseY + spiralY,
+                z: baseZ + spiralZ
+            }
+        };
+    }
 
+    // 计算引力场效果
+    calculateGravitationalField(currentPos, targetPos, progress) {
+        // 引力强度随进度变化
+        const gravityStrength = Math.sin(progress * Math.PI) * 0.1;
+        
+        // 计算引力方向
+        const dx = targetPos.x - currentPos.x;
+        const dy = targetPos.y - currentPos.y;
+        const dz = targetPos.z - currentPos.z;
+        
+        // 归一化并应用强度
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance > 0.001) {
+            return {
+                x: (dx / distance) * gravityStrength,
+                y: (dy / distance) * gravityStrength,
+                z: (dz / distance) * gravityStrength
+            };
+        }
+        
+        return { x: 0, y: 0, z: 0 };
+    }
+
+    // 获取汇聚阶段的颜色
+    getConvergenceColor(progress, intensity, phase) {
+        let r, g, b;
+        
+        switch (phase) {
+            case 1: // 引力觉醒：从暗淡开始
+                r = 0.1 + intensity * 0.2;
+                g = 0.1 + intensity * 0.3;
+                b = 0.3 + intensity * 0.4;
+                break;
+                
+            case 2: // 螺旋汇聚：能量增强
+                r = 0.2 + intensity * 0.3;
+                g = 0.3 + intensity * 0.4;
+                b = 0.6 + intensity * 0.3;
+                break;
+                
+            case 3: // 精确定位：到达目标颜色
+                r = 0.3 + intensity * 0.2;
+                g = 0.4 + intensity * 0.3;
+                b = 0.8 + intensity * 0.1;
+                break;
+                
+            default:
+                r = 0.1;
+                g = 0.1;
+                b = 0.3;
+        }
+        
+        return { r, g, b };
+    }
+
+    // 计算汇聚阶段的大小
+    calculateConvergenceSize(progress, intensity, phase) {
+        switch (phase) {
+            case 1: // 引力觉醒：轻微增长
+                return 0.5 + intensity;
+                
+            case 2: // 螺旋汇聚：动态变化
+                const spiral = Math.sin(progress * Math.PI * 3) * 0.1;
+                return 0.7 + intensity * 0.8 + spiral;
+                
+            case 3: // 精确定位：稳定到目标大小
+                return 0.9 + intensity * 0.3;
+                
+            default:
+                return 0.5;
+        }
+    }
+
+    // 专门的平滑缓动函数
+    smoothConvergenceEasing(t) {
+        // 使用三次贝塞尔曲线创造优雅的加速和减速
+        return t * t * (3 - 2 * t); // smoothstep
+    }
 
     // Helper function for organic color generation
     getOrganicColor(seed, intensity) {
