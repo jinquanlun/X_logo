@@ -51,62 +51,22 @@
             border-color: rgba(255, 255, 255, 0.5);
         }
         
-        #controls {
+        #simpleHint {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
             font-family: Arial, sans-serif;
             font-size: 14px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 8px;
+            text-align: center;
             z-index: 20;
             opacity: 0;
             transition: opacity 0.3s ease;
-            max-width: 300px;
         }
         
-        #controls.visible {
+        #simpleHint.visible {
             opacity: 1;
-        }
-        
-        #controls h3 {
-            margin: 0 0 10px 0;
-            color: #4FC3F7;
-        }
-        
-        #controls p {
-            margin: 5px 0;
-            line-height: 1.4;
-        }
-        
-        #controls .key {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-weight: bold;
-        }
-        
-        #infoToggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 21;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        #infoToggle:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
@@ -115,30 +75,8 @@
         <canvas id="imageCanvas"></canvas>
         <button id="startButton">查看粒子动画</button>
         
-        <button id="infoToggle">?</button>
-        
-        <div id="controls">
-            <h3>Interactive Controls</h3>
-            <p><span class="key">Mouse</span> - Move to interact with particles</p>
-            <p><span class="key">Click + Drag</span> - Push/pull particles</p>
-            <p><span class="key">A</span> - Toggle attraction/repulsion mode</p>
-            <p><span class="key">1-5</span> - Change color schemes</p>
-            <p><span class="key">R</span> - Reset animation</p>
-            <p><span class="key">Space</span> - Pause/resume animation</p>
-            <p><span class="key">M</span> - Toggle audio reactive mode</p>
-            <p><span class="key">E</span> - Toggle particle emission mode</p>
-            <p><span class="key">P</span> - Toggle performance mode</p>
-            <p><span class="key">Mouse Wheel</span> - Zoom in/out</p>
-            
-            <h3>Emission Mode</h3>
-            <p>When enabled, click anywhere to create particle fountains!</p>
-            
-            <h3>Color Schemes</h3>
-            <p><span class="key">1</span> Twilight (default)</p>
-            <p><span class="key">2</span> Neon</p>
-            <p><span class="key">3</span> Fire</p>
-            <p><span class="key">4</span> Forest</p>
-            <p><span class="key">5</span> Ocean</p>
+        <div id="simpleHint">
+            <p>移动鼠标与粒子互动 • 按 R 重置 • 按空格键暂停</p>
         </div>
     </div>
 

@@ -1256,11 +1256,16 @@ class ParticleAnimation {
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
         this.stateProgress = Math.min(phaseTime / duration, 1);
 
+        // 初始化激活种子（仅在第一次运行时）
+        if (!this.activationSeeds) {
+            this.initializeActivationSeeds();
+        }
+
         const positions = this.particles.geometry.attributes.position.array;
         const colors = this.particles.geometry.attributes.color.array;
         const sizes = this.particles.geometry.attributes.size.array;
         
-        // 重新设计：简单而优雅的激活效果
+        // 三阶段神经网络式激活系统
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
             
@@ -1269,40 +1274,248 @@ class ParticleAnimation {
             const baseY = this.currentPositions.length > 0 ? this.currentPositions[index + 1] : this.positions1[index + 1];
             const baseZ = this.currentPositions.length > 0 ? this.currentPositions[index + 2] : this.positions1[index + 2];
             
-            // 计算距离中心的距离
-            const distanceFromCenter = Math.sqrt(baseX * baseX + baseY * baseY);
-            const normalizedDistance = Math.min(distanceFromCenter / 4, 1);
+            // 计算激活阶段和强度
+            const activationData = this.calculateActivationPhase(i, this.stateProgress);
+            const { phase, intensity, localProgress } = activationData;
             
-            // 简化的激活效果：从内向外的温和波动
-            const activationWave = Math.sin(this.stateProgress * Math.PI * 2 - normalizedDistance * 3) * 0.5 + 0.5;
-            const intensity = activationWave * (1 - this.stateProgress * 0.3); // 逐渐减弱
+            // 获取对应阶段的颜色
+            const color = this.getActivationColor(phase, intensity, localProgress);
+            colors[index] = color.r;
+            colors[index + 1] = color.g;
+            colors[index + 2] = color.b;
             
-            // 优雅的颜色渐变：从深紫到亮蓝
-            const colorProgress = this.stateProgress * (1 - normalizedDistance * 0.2);
-            colors[index] = 0.3 + intensity * 0.4 + colorProgress * 0.2;     // 红：深紫到亮紫
-            colors[index + 1] = 0.2 + intensity * 0.3 + colorProgress * 0.5; // 绿：低到中等
-            colors[index + 2] = 0.8 + intensity * 0.2;                      // 蓝：保持深蓝基调
+            // 神经连接式的位置调整
+            let positionOffset = { x: 0, y: 0, z: 0 };
+            if (phase >= 2 && intensity > 0.1) {
+                // 轻微向最近种子的吸引，然后回归
+                const attraction = this.calculateNeuralAttraction(baseX, baseY, baseZ, localProgress);
+                positionOffset.x = attraction.x * intensity * 0.05;
+                positionOffset.y = attraction.y * intensity * 0.05;
+                positionOffset.z = attraction.z * intensity * 0.03;
+            }
             
-            // 温和的位置变化：轻微的呼吸效果
-            const breathingIntensity = intensity * 0.02;
-            const angle = Math.atan2(baseY, baseX);
-            positions[index] = baseX + Math.cos(angle) * breathingIntensity;
-            positions[index + 1] = baseY + Math.sin(angle) * breathingIntensity;
-            positions[index + 2] = baseZ;
+            positions[index] = baseX + positionOffset.x;
+            positions[index + 1] = baseY + positionOffset.y;
+            positions[index + 2] = baseZ + positionOffset.z;
             
-            // 温和的大小变化
-            sizes[i] = this.particleSizes[i] + intensity * 0.03;
+            // 脉冲式大小变化
+            const sizePulse = this.calculateActivationSizePulse(phase, intensity, localProgress);
+            sizes[i] = this.particleSizes[i] * (1 + sizePulse);
         }
         
         this.particles.geometry.attributes.position.needsUpdate = true;
         this.particles.geometry.attributes.color.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
         
-        if (this.stateProgress >= 0.95) {
+        if (this.stateProgress >= 0.98) {
             if (this.currentState === ANIMATION_STATES.ACTIVATION) {
-                console.log('Smooth activation complete, starting morphing');
+                console.log('Neural activation complete, starting morphing');
                 this.transitionToState(ANIMATION_STATES.MORPHING);
             }
+        }
+    }
+
+    // 初始化激活种子系统
+    initializeActivationSeeds() {
+        this.activationSeeds = [];
+        const seedCount = 6; // 6个均匀分布的种子
+        
+        // 使用确定性随机选择种子，确保分布均匀
+        for (let i = 0; i < seedCount; i++) {
+            const angle = (i / seedCount) * Math.PI * 2;
+            const radius = 1 + Math.sin(i * 2.3) * 0.5; // 轻微的半径变化
+            
+            // 找到最接近这个理想位置的粒子
+            let bestParticleIndex = 0;
+            let minDistance = Infinity;
+            
+            const targetX = Math.cos(angle) * radius;
+            const targetY = Math.sin(angle) * radius;
+            
+            for (let j = 0; j < this.particleCount; j++) {
+                const px = this.positions1[j * 3];
+                const py = this.positions1[j * 3 + 1];
+                const distance = Math.sqrt((px - targetX) * (px - targetX) + (py - targetY) * (py - targetY));
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestParticleIndex = j;
+                }
+            }
+            
+            this.activationSeeds.push({
+                particleIndex: bestParticleIndex,
+                x: this.positions1[bestParticleIndex * 3],
+                y: this.positions1[bestParticleIndex * 3 + 1],
+                z: this.positions1[bestParticleIndex * 3 + 2],
+                activationDelay: i * 0.03 // 种子激活的轻微延迟
+            });
+        }
+        
+        // 预计算每个粒子到种子的最短距离
+        this.particleToSeedDistance = new Array(this.particleCount);
+        for (let i = 0; i < this.particleCount; i++) {
+            const px = this.positions1[i * 3];
+            const py = this.positions1[i * 3 + 1];
+            const pz = this.positions1[i * 3 + 2];
+            
+            let minDistance = Infinity;
+            let closestSeedIndex = 0;
+            
+            this.activationSeeds.forEach((seed, seedIndex) => {
+                const distance = Math.sqrt(
+                    (px - seed.x) * (px - seed.x) + 
+                    (py - seed.y) * (py - seed.y) + 
+                    (pz - seed.z) * (pz - seed.z)
+                );
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestSeedIndex = seedIndex;
+                }
+            });
+            
+            this.particleToSeedDistance[i] = {
+                distance: minDistance,
+                seedIndex: closestSeedIndex
+            };
+        }
+    }
+
+    // 计算粒子的激活阶段和强度
+    calculateActivationPhase(particleIndex, globalProgress) {
+        const seedData = this.activationSeeds[this.particleToSeedDistance[particleIndex].seedIndex];
+        const distance = this.particleToSeedDistance[particleIndex].distance;
+        
+        // 三个阶段的时间分配
+        const phase1End = 0.25;   // 种子激活
+        const phase2End = 0.75;   // 能量传播
+        const phase3End = 1.0;    // 共振稳定
+        
+        // 传播延迟基于距离
+        const propagationDelay = Math.min(distance / 3.0, 0.4);
+        const isSeed = this.activationSeeds.some(seed => seed.particleIndex === particleIndex);
+        
+        let phase = 0;
+        let intensity = 0;
+        let localProgress = 0;
+        
+        if (globalProgress <= phase1End) {
+            // 阶段1：种子激活
+            phase = 1;
+            if (isSeed) {
+                const seedDelay = seedData.activationDelay;
+                localProgress = Math.max(0, (globalProgress - seedDelay) / (phase1End - seedDelay));
+                intensity = this.elegantEasing(Math.min(localProgress * 2, 1));
+            }
+        } else if (globalProgress <= phase2End) {
+            // 阶段2：能量传播
+            phase = 2;
+            const phase2Progress = (globalProgress - phase1End) / (phase2End - phase1End);
+            const adjustedProgress = Math.max(0, phase2Progress - propagationDelay);
+            localProgress = Math.min(adjustedProgress * 1.5, 1);
+            intensity = this.elegantEasing(localProgress);
+        } else {
+            // 阶段3：共振稳定
+            phase = 3;
+            localProgress = (globalProgress - phase2End) / (phase3End - phase2End);
+            intensity = 0.8 + Math.sin(localProgress * Math.PI * 4 + particleIndex * 0.1) * 0.2;
+        }
+        
+        return { phase, intensity, localProgress };
+    }
+
+    // 获取激活阶段对应的颜色
+    getActivationColor(phase, intensity, localProgress) {
+        let r, g, b;
+        
+        switch (phase) {
+            case 1: // 种子激活：深蓝到电蓝
+                r = 0.1 + intensity * 0.3;
+                g = 0.1 + intensity * 0.4;
+                b = 0.6 + intensity * 0.4;
+                break;
+                
+            case 2: // 能量传播：电蓝到青蓝到白光脉冲
+                if (localProgress < 0.7) {
+                    const subProgress = localProgress / 0.7;
+                    r = 0.2 + subProgress * 0.4;
+                    g = 0.3 + subProgress * 0.5;
+                    b = 0.8 + subProgress * 0.2;
+                } else {
+                    // 白光脉冲
+                    const pulseProgress = (localProgress - 0.7) / 0.3;
+                    const pulseIntensity = Math.sin(pulseProgress * Math.PI);
+                    r = 0.6 + pulseIntensity * 0.4;
+                    g = 0.7 + pulseIntensity * 0.3;
+                    b = 1.0;
+                }
+                break;
+                
+            case 3: // 共振稳定：稳定亮蓝
+                const stabilityPulse = Math.sin(localProgress * Math.PI * 3) * 0.1;
+                r = 0.4 + stabilityPulse;
+                g = 0.6 + stabilityPulse * 0.5;
+                b = 0.95 + stabilityPulse * 0.05;
+                break;
+                
+            default:
+                r = 0.2;
+                g = 0.2;
+                b = 0.7;
+        }
+        
+        return { r: Math.min(r * intensity, 1), g: Math.min(g * intensity, 1), b: Math.min(b * intensity, 1) };
+    }
+
+    // 计算神经连接式的位置吸引
+    calculateNeuralAttraction(x, y, z, localProgress) {
+        const closestSeed = this.activationSeeds[this.particleToSeedDistance[this.findParticleIndex(x, y, z)].seedIndex];
+        
+        const dx = closestSeed.x - x;
+        const dy = closestSeed.y - y;
+        const dz = closestSeed.z - z;
+        
+        // 先吸引后回归的效果
+        const attractionPhase = localProgress < 0.6 ? localProgress / 0.6 : (1 - localProgress) / 0.4;
+        const smoothAttraction = this.elegantEasing(attractionPhase);
+        
+        return {
+            x: dx * smoothAttraction,
+            y: dy * smoothAttraction,
+            z: dz * smoothAttraction
+        };
+    }
+
+    // 查找粒子索引的辅助函数
+    findParticleIndex(x, y, z) {
+        for (let i = 0; i < this.particleCount; i++) {
+            const px = this.positions1[i * 3];
+            const py = this.positions1[i * 3 + 1];
+            const pz = this.positions1[i * 3 + 2];
+            if (Math.abs(px - x) < 0.001 && Math.abs(py - y) < 0.001 && Math.abs(pz - z) < 0.001) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    // 计算激活阶段的大小脉冲
+    calculateActivationSizePulse(phase, intensity, localProgress) {
+        switch (phase) {
+            case 1: // 种子激活：快速增大
+                return intensity * 0.15;
+                
+            case 2: // 能量传播：脉冲式变化
+                const pulseFreq = 3;
+                const pulse = Math.sin(localProgress * Math.PI * pulseFreq) * 0.1;
+                return intensity * (0.1 + pulse);
+                
+            case 3: // 共振稳定：同步脉动
+                const syncPulse = Math.sin(localProgress * Math.PI * 2) * 0.05;
+                return intensity * (0.08 + syncPulse);
+                
+            default:
+                return 0;
         }
     }
     
@@ -1684,6 +1897,9 @@ class ParticleAnimation {
                 break;
             case ANIMATION_STATES.ACTIVATION:
                 this.phaseStartTime = currentTime;
+                // 重置激活系统，准备新的激活序列
+                this.activationSeeds = null;
+                this.particleToSeedDistance = null;
                 break;
             case ANIMATION_STATES.MORPHING:
                 this.phaseStartTime = currentTime;
@@ -1709,17 +1925,18 @@ class ParticleAnimation {
     
     setupEventListeners() {
         const startButton = document.getElementById('startButton');
-        const infoToggle = document.getElementById('infoToggle');
-        const controls = document.getElementById('controls');
+        const simpleHint = document.getElementById('simpleHint');
         const canvas = this.renderer.domElement;
         
         startButton.addEventListener('click', () => {
             this.startNewAnimationSequence();
-        });
-        
-        // Info toggle functionality
-        infoToggle.addEventListener('click', () => {
-            controls.classList.toggle('visible');
+            // 动画开始后显示提示，3秒后自动隐藏
+            setTimeout(() => {
+                simpleHint.classList.add('visible');
+                setTimeout(() => {
+                    simpleHint.classList.remove('visible');
+                }, 3000);
+            }, 1000);
         });
         
         // Mouse/touch interaction
@@ -1773,28 +1990,9 @@ class ParticleAnimation {
             this.mouseForce.strength = 0;
         });
         
-        // Keyboard controls
+        // 简化的键盘控制
         document.addEventListener('keydown', (e) => {
             switch(e.key.toLowerCase()) {
-                case 'a':
-                    this.attractionMode = !this.attractionMode;
-                    console.log('Attraction mode:', this.attractionMode ? 'ON' : 'OFF');
-                    break;
-                case '1':
-                    this.setColorScheme('twilight');
-                    break;
-                case '2':
-                    this.setColorScheme('neon');
-                    break;
-                case '3':
-                    this.setColorScheme('fire');
-                    break;
-                case '4':
-                    this.setColorScheme('forest');
-                    break;
-                case '5':
-                    this.setColorScheme('ocean');
-                    break;
                 case 'r':
                     this.resetAnimation();
                     break;
@@ -1802,24 +2000,7 @@ class ParticleAnimation {
                     e.preventDefault();
                     this.togglePause();
                     break;
-                case 'm':
-                    this.toggleAudio();
-                    break;
-                case 'e':
-                    this.toggleEmission();
-                    break;
-                case 'p':
-                    this.togglePerformanceMode();
-                    break;
             }
-        });
-        
-        // Mouse wheel for zoom
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            this.zoomLevel += e.deltaY * -0.001;
-            this.zoomLevel = Math.max(0.5, Math.min(3.0, this.zoomLevel));
-            this.camera.position.z = 5 / this.zoomLevel;
         });
     }
     
