@@ -152,33 +152,7 @@ const organicEasing = {
     }
 };
 
-// Enhanced Organic Curve Generation - Creates natural particle paths with variations
-function generateOrganicCurve(start, end, progress, curvature = 0.3, seed = 0, variation = 0.1) {
-    const t = organicEasing.ultraSmooth(progress);
-
-    // Multiple control points for more complex curves
-    const midX = (start.x + end.x) / 2 + Math.sin(seed * Math.PI * 2) * curvature;
-    const midY = (start.y + end.y) / 2 + Math.cos(seed * Math.PI * 2) * curvature;
-    const midZ = (start.z + end.z) / 2 + Math.sin(seed * Math.PI * 3) * curvature * 0.5;
-
-    // Add variation for unique paths
-    const varX = Math.sin(seed * Math.PI * 4.1) * variation;
-    const varY = Math.cos(seed * Math.PI * 3.7) * variation;
-    const varZ = Math.sin(seed * Math.PI * 5.3) * variation * 0.3;
-
-    // Cubic Bezier curve for more organic movement
-    const invT = 1 - t;
-    const t2 = t * t;
-    const t3 = t2 * t;
-    const invT2 = invT * invT;
-    const invT3 = invT2 * invT;
-
-    return {
-        x: invT3 * start.x + 3 * invT2 * t * (midX + varX) + 3 * invT * t2 * (midX - varX) + t3 * end.x,
-        y: invT3 * start.y + 3 * invT2 * t * (midY + varY) + 3 * invT * t2 * (midY - varY) + t3 * end.y,
-        z: invT3 * start.z + 3 * invT2 * t * (midZ + varZ) + 3 * invT * t2 * (midZ - varZ) + t3 * end.z
-    };
-}
+// Simplified organic curve generation - replaced by elegant spiral convergence path
 
 // Noise function for organic movement
 function perlinNoise(x, y, seed = 0) {
@@ -203,23 +177,7 @@ function perlinNoise(x, y, seed = 0) {
     return a + sy * (b - a);
 }
 
-// Fluid dynamics for particle interaction
-function calculateFluidForce(particlePos, neighborPos, distance, restDistance = 0.1) {
-    if (distance === 0) return { x: 0, y: 0, z: 0 };
-    
-    const springForce = (distance - restDistance) * 0.001;
-    const dampingForce = 0.95;
-    
-    const dirX = (neighborPos.x - particlePos.x) / distance;
-    const dirY = (neighborPos.y - particlePos.y) / distance;
-    const dirZ = (neighborPos.z - particlePos.z) / distance;
-    
-    return {
-        x: dirX * springForce * dampingForce,
-        y: dirY * springForce * dampingForce,
-        z: dirZ * springForce * dampingForce
-    };
-}
+// Fluid dynamics system - simplified for performance
 
 class ParticleAnimation {
     constructor() {
@@ -465,52 +423,15 @@ class ParticleAnimation {
         }
     }
     
-    initializeEnhancedParticleProperties() {
-        // Initialize enhanced particle personality arrays
-        this.particleDelays = [];
+    initializeElegantParticleProperties() {
+        // Initialize simplified particle properties for elegant performance
         this.particleSeeds = [];
-        this.particleCurvatures = [];
-        this.particleEnergies = [];
-        this.particleLifePhases = [];
-        this.particleNoiseOffsets = [];
-        this.particleFluidVelocities = [];
-        this.particleNeighbors = [];
-        this.particleTemperatures = [];
-        this.particleMasses = [];
-        this.particleFrictions = [];
-        this.particleSpringConstants = [];
-        this.particleOrganicSeeds = [];
+        this.particlePhases = [];
         
         for (let i = 0; i < this.particleCount; i++) {
-            // Multiple seeds for different organic behaviors
-            const seed1 = Math.random();
-            const seed2 = Math.random();
-            const seed3 = Math.random();
-            const seed4 = Math.random();
-            
-            // Enhanced particle personality
-            this.particleDelays.push(seed1 * 0.4); // Staggered timing
-            this.particleSeeds.push(seed1);
-            this.particleCurvatures.push(0.1 + seed2 * 0.5); // More variation in curves
-            this.particleEnergies.push(0.3 + seed3 * 0.7); // Wider energy range
-            this.particleLifePhases.push(seed4 * Math.PI * 2);
-            
-            // Organic motion properties
-            this.particleNoiseOffsets.push({
-                x: seed1 * 1000,
-                y: seed2 * 1000,
-                z: seed3 * 1000,
-                time: seed4 * 1000
-            });
-            
-            // Fluid dynamics properties
-            this.particleFluidVelocities.push({ x: 0, y: 0, z: 0 });
-            this.particleNeighbors.push([]);
-            this.particleTemperatures.push(0.5 + seed1 * 0.5);
-            this.particleMasses.push(0.8 + seed2 * 0.4);
-            this.particleFrictions.push(0.95 + seed3 * 0.04);
-            this.particleSpringConstants.push(0.001 + seed4 * 0.002);
-            this.particleOrganicSeeds.push([seed1, seed2, seed3, seed4]);
+            // Simple but elegant particle variation
+            this.particleSeeds.push(Math.random());
+            this.particlePhases.push(Math.random() * Math.PI * 2);
         }
     }
     
@@ -549,44 +470,7 @@ class ParticleAnimation {
         }
     }
     
-    calculateFluidInfluence(particleIndex) {
-        const neighbors = this.particleNeighbors[particleIndex];
-        let force = { x: 0, y: 0, z: 0 };
-        
-        if (!neighbors || neighbors.length === 0) return force;
-        
-        const currentPos = {
-            x: this.currentPositions[particleIndex * 3] || this.spreadPositions[particleIndex * 3],
-            y: this.currentPositions[particleIndex * 3 + 1] || this.spreadPositions[particleIndex * 3 + 1],
-            z: this.currentPositions[particleIndex * 3 + 2] || this.spreadPositions[particleIndex * 3 + 2]
-        };
-        
-        for (const neighbor of neighbors) {
-            const neighborPos = {
-                x: this.currentPositions[neighbor.index * 3] || this.spreadPositions[neighbor.index * 3],
-                y: this.currentPositions[neighbor.index * 3 + 1] || this.spreadPositions[neighbor.index * 3 + 1],
-                z: this.currentPositions[neighbor.index * 3 + 2] || this.spreadPositions[neighbor.index * 3 + 2]
-            };
-            
-            const fluidForce = calculateFluidForce(currentPos, neighborPos, neighbor.distance);
-            force.x += fluidForce.x;
-            force.y += fluidForce.y;
-            force.z += fluidForce.z;
-        }
-        
-        return force;
-    }
-    
-    calculateThermalMotion(particleIndex, temperature, time) {
-        const noiseOffset = this.particleNoiseOffsets[particleIndex];
-        const intensity = temperature * 0.01;
-        
-        return {
-            x: perlinNoise(time * 2 + noiseOffset.x, noiseOffset.y, 123) * intensity,
-            y: perlinNoise(time * 2 + noiseOffset.y, noiseOffset.z, 456) * intensity,
-            z: perlinNoise(time * 2 + noiseOffset.z, noiseOffset.x, 789) * intensity * 0.5
-        };
-    }
+    // Complex fluid and thermal systems - removed for elegant simplicity
     
     createParticles() {
         if (this.positions1.length === 0 || this.positions2.length === 0) {
@@ -602,31 +486,19 @@ class ParticleAnimation {
         this.fillArrayEvenly(this.positions1, maxLength);
         this.fillArrayEvenly(this.positions2, maxLength);
         
-        // Generate spread positions and initialize enhanced properties
+        // Generate spread positions and initialize elegant properties
         this.generateSpreadPositions();
-        this.initializeEnhancedParticleProperties();
+        this.initializeElegantParticleProperties();
         
-        // Initialize enhanced particle properties
+        // Initialize basic particle properties
         this.particleVelocities = [];
         this.particleSizes = [];
         this.particleOpacities = [];
-        this.particlePhases = [];
         
         for (let i = 0; i < this.particleCount; i++) {
             this.particleVelocities.push(0, 0, 0); // vx, vy, vz
-            this.particleSizes.push(0.3 + Math.random() * 0.2); // smaller, more elegant sizes
+            this.particleSizes.push(0.3 + Math.random() * 0.2); // elegant sizes
             this.particleOpacities.push(1.0);
-            this.particlePhases.push(Math.random() * Math.PI * 2); // for breathing
-
-            // Organic Particle Personality - Each particle is a unique individual
-            const particleSeed = Math.random();
-            const particleId = i / this.particleCount; // Normalized ID for patterns
-
-            this.particleDelays.push(particleSeed * 0.8 + particleId * 0.3); // Staggered emergence
-            this.particleSeeds.push(particleSeed); // Unique random seed
-            this.particleCurvatures.push(0.2 + particleSeed * 0.4); // Individual curve preference
-            this.particleEnergies.push(0.5 + particleSeed * 0.5); // Individual energy level
-            this.particleLifePhases.push(particleSeed * Math.PI * 2); // Individual life cycle phase
         }
         
         // 创建粒子几何体
@@ -641,19 +513,16 @@ class ParticleAnimation {
             positions[i * 3 + 1] = this.spreadPositions[i * 3 + 1];
             positions[i * 3 + 2] = this.spreadPositions[i * 3 + 2];
             
-            // 设置粒子颜色 - 暮光深蓝紫色
-            const twilightVariation = Math.random();
-            if (twilightVariation < 0.6) {
-                // Deep blue twilight
-                colors[i * 3] = 0.2 + Math.random() * 0.3; // r: 0.2-0.5
-                colors[i * 3 + 1] = 0.3 + Math.random() * 0.4; // g: 0.3-0.7
-                colors[i * 3 + 2] = 0.8 + Math.random() * 0.2; // b: 0.8-1.0
-            } else {
-                // Deep purple twilight
-                colors[i * 3] = 0.4 + Math.random() * 0.4; // r: 0.4-0.8
-                colors[i * 3 + 1] = 0.2 + Math.random() * 0.3; // g: 0.2-0.5
-                colors[i * 3 + 2] = 0.7 + Math.random() * 0.3; // b: 0.7-1.0
-            }
+            // 设置粒子颜色 - 预览蓝橙渐变色彩 (低强度版本)
+            const targetPos = {
+                x: this.positions1[i * 3],
+                y: this.positions1[i * 3 + 1],
+                z: this.positions1[i * 3 + 2]
+            };
+            const previewColor = this.calculateXShapeGradientColor(0.2, i, targetPos); // Low energy preview
+            colors[i * 3] = previewColor.r;
+            colors[i * 3 + 1] = previewColor.g;
+            colors[i * 3 + 2] = previewColor.b;
             
             sizes[i] = this.particleSizes[i];
         }
@@ -858,26 +727,18 @@ class ParticleAnimation {
 
                 if(elegantMask < 0.01) discard;
                 
-                // === 优雅颜色系统 ===
-                // 基于距离的优雅颜色映射
-                float centerDistance = clamp(vDistance / 5.0, 0.0, 1.0);
-                float particleSeed = sin(vPosition.x * 8.0 + vPosition.y * 6.0) * 0.5 + 0.5;
-
-                // 轻微的时间变化，保持稳定性
-                float timeVariation = sin(time * 0.5 + vPosition.x * 2.0) * 0.15 + 0.85;
-
-                // 颜色映射参数
-                float colorT = centerDistance * 0.8 + particleSeed * 0.2;
-                colorT = mix(colorT, colorT * timeVariation, 0.3);
-                colorT = clamp(colorT, 0.0, 1.0);
-
-                // 使用优雅调色板
-                vec3 baseColor = elegantColorPalette(colorT, vColorTheme, 0.8);
-
+                // === 使用JavaScript计算的渐变颜色 ===
+                // 直接使用从vertex shader传递的颜色
+                vec3 baseColor = vColor;
+                
+                // 添加轻微的时间变化增强视觉效果
+                float timeEnhancement = sin(time * 0.3 + vPosition.x * 1.5) * 0.08 + 1.0;
+                baseColor *= timeEnhancement;
+                
                 // 轻微的速度颜色效果
-                float velocityInfluence = length(vVelocity) * 0.3;
-                if (velocityInfluence > 0.3) {
-                    vec3 velocityColor = mix(baseColor, vec3(1.0, 0.95, 0.9), velocityInfluence * 0.2);
+                float velocityInfluence = length(vVelocity) * 0.2;
+                if (velocityInfluence > 0.2) {
+                    vec3 velocityColor = mix(baseColor, vec3(1.0, 0.98, 0.95), velocityInfluence * 0.15);
                     baseColor = velocityColor;
                 }
 
@@ -1017,7 +878,7 @@ class ParticleAnimation {
         }
     }
     
-    // Stage 1: 引力场式优雅汇聚 - 螺旋引力场汇聚到X形状
+    // Stage 1: Ultra-Elegant Particle Convergence to X Shape
     updateConvergingState() {
         const duration = STAGE_DURATIONS.CONVERGING;
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
@@ -1027,254 +888,198 @@ class ParticleAnimation {
         const colors = this.particles.geometry.attributes.color.array;
         const sizes = this.particles.geometry.attributes.size.array;
 
-        // 计算X形状的中心点
-        const xCenter = { x: 0, y: 0, z: 0 };
+        // Create unified wave pattern for harmonious convergence
+        const waveSpeed = 3.0;
+        const wavePhase = this.stateProgress * waveSpeed;
 
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
 
-            // 获取起始位置和目标位置
-            const startPos = {
+            // Start and target positions
+            const start = {
                 x: this.spreadPositions[index],
                 y: this.spreadPositions[index + 1],
                 z: this.spreadPositions[index + 2]
             };
-            const targetPos = {
+            const target = {
                 x: this.positions1[index],
                 y: this.positions1[index + 1],
                 z: this.positions1[index + 2]
             };
 
-            // 计算粒子到X中心的距离，用于分层时间控制
-            const distanceFromCenter = Math.sqrt(
-                startPos.x * startPos.x + startPos.y * startPos.y + startPos.z * startPos.z
-            );
-
-            // 分层时间控制：外层粒子提前启动，创造引力波效果
-            const layeredTiming = this.calculateLayeredTiming(distanceFromCenter, this.stateProgress);
-            const { phase, localProgress, intensity } = layeredTiming;
-
-            // 根据当前阶段计算位置
-            let currentPos = { x: startPos.x, y: startPos.y, z: startPos.z };
+            // Calculate particle's distance from center for wave-based timing
+            const centerDistance = Math.sqrt(start.x * start.x + start.y * start.y);
+            const normalizedDistance = Math.min(centerDistance / 8, 1);
             
-            if (phase >= 1) {
-                // 计算螺旋汇聚路径
-                const spiralData = this.generateSpiralConvergence(startPos, targetPos, localProgress, distanceFromCenter);
-                currentPos = spiralData.position;
-                
-                // 应用引力场效果
-                const gravityEffect = this.calculateGravitationalField(currentPos, targetPos, localProgress);
-                currentPos.x += gravityEffect.x;
-                currentPos.y += gravityEffect.y;
-                currentPos.z += gravityEffect.z;
-            }
+            // Unified wave-based delay instead of random individual delays
+            const waveDelay = normalizedDistance * 0.3;
+            const waveProgress = Math.max(0, Math.min(1, (this.stateProgress - waveDelay) / (1 - waveDelay * 0.8)));
+            
+            // Elegant sigmoid-based easing for natural acceleration/deceleration
+            const smoothProgress = this.elegantSigmoidEasing(waveProgress);
 
-            // 设置粒子位置
-            positions[index] = currentPos.x;
-            positions[index + 1] = currentPos.y;
-            positions[index + 2] = currentPos.z;
+            // Create spiral convergence path using polar coordinates
+            const spiralPath = this.calculateSpiralConvergencePath(start, target, smoothProgress, i);
 
-            // 优雅的颜色过渡
-            const color = this.getConvergenceColor(localProgress, intensity, phase);
-            colors[index] = color.r;
-            colors[index + 1] = color.g;
-            colors[index + 2] = color.b;
+            // Apply the calculated position
+            positions[index] = spiralPath.x;
+            positions[index + 1] = spiralPath.y;
+            positions[index + 2] = spiralPath.z;
 
-            // 优雅的大小变化
-            const sizeMultiplier = this.calculateConvergenceSize(localProgress, intensity, phase);
-            sizes[i] = this.particleSizes[i] * sizeMultiplier;
+            // Beautiful blue-to-orange gradient based on target X position
+            const gradientColor = this.calculateXShapeGradientColor(smoothProgress, i, target);
+            colors[index] = gradientColor.r;
+            colors[index + 1] = gradientColor.g;
+            colors[index + 2] = gradientColor.b;
+
+            // Elegant size evolution with natural growth curve
+            const sizeEvolution = this.calculateElegantSizeEvolution(smoothProgress);
+            sizes[i] = this.particleSizes[i] * sizeEvolution;
         }
 
-        // 更新几何体
+        // Update geometry
         this.particles.geometry.attributes.position.needsUpdate = true;
         this.particles.geometry.attributes.color.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
 
-        // 平滑过渡到呼吸阶段
-        if (this.stateProgress >= 0.98) {
+        // Perfect completion detection with energy stabilization phase
+        if (this.stateProgress >= 1.0) {
             if (this.currentState === ANIMATION_STATES.CONVERGING) {
-                console.log('Gravitational convergence complete, starting breathing phase');
+                console.log('Ultra-elegant convergence complete with perfect harmony');
                 this.transitionToState(ANIMATION_STATES.X_BREATHING);
             }
         }
     }
 
-    // 计算分层时间控制
-    calculateLayeredTiming(distanceFromCenter, globalProgress) {
-        // 归一化距离 (0-1)
-        const normalizedDistance = Math.min(distanceFromCenter / 6, 1);
-        
-        // 外层粒子提前启动，创造引力波效果
-        const startDelay = normalizedDistance * 0.3; // 最大30%的提前启动
-        const adjustedProgress = Math.max(0, globalProgress + startDelay - normalizedDistance * 0.2);
-        
-        // 三个阶段的时间分配
-        const phase1End = 0.3;  // 引力觉醒
-        const phase2End = 0.7;  // 螺旋汇聚
-        const phase3End = 1.0;  // 精确定位
-        
-        let phase = 0;
-        let localProgress = 0;
-        let intensity = 0;
-        
-        if (adjustedProgress <= phase1End) {
-            // 阶段1：引力觉醒
-            phase = 1;
-            localProgress = adjustedProgress / phase1End;
-            intensity = this.smoothConvergenceEasing(localProgress) * 0.3;
-        } else if (adjustedProgress <= phase2End) {
-            // 阶段2：螺旋汇聚
-            phase = 2;
-            localProgress = (adjustedProgress - phase1End) / (phase2End - phase1End);
-            intensity = 0.3 + this.smoothConvergenceEasing(localProgress) * 0.5;
-        } else {
-            // 阶段3：精确定位
-            phase = 3;
-            localProgress = (adjustedProgress - phase2End) / (phase3End - phase2End);
-            intensity = 0.8 + this.smoothConvergenceEasing(localProgress) * 0.2;
-        }
-        
-        return { phase, localProgress, intensity };
+    // Elegant sigmoid-based easing for natural motion
+    elegantSigmoidEasing(t) {
+        // Enhanced sigmoid function for ultra-smooth acceleration/deceleration
+        const steepness = 6; // Controls the steepness of the S-curve
+        const shifted = (t - 0.5) * steepness;
+        return 1 / (1 + Math.exp(-shifted));
     }
 
-    // 生成螺旋汇聚路径
-    generateSpiralConvergence(start, target, progress, distanceFromCenter) {
-        // 螺旋参数基于距离
-        const spiralRadius = (distanceFromCenter / 6) * (1 - progress) * 0.8;
-        const spiralTurns = 2 + (distanceFromCenter / 6); // 外层粒子更多转数
+    // Calculate spiral convergence path using polar coordinates
+    calculateSpiralConvergencePath(start, target, progress, particleIndex) {
+        // Convert to polar coordinates for spiral calculation
+        const startAngle = Math.atan2(start.y, start.x);
+        const targetAngle = Math.atan2(target.y, target.x);
+        const startRadius = Math.sqrt(start.x * start.x + start.y * start.y);
+        const targetRadius = Math.sqrt(target.x * target.x + target.y * target.y);
+
+        // Create elegant spiral path with minimal angular change
+        const spiralTurns = 0.25; // Quarter turn maximum for elegance
+        const spiralOffset = (particleIndex * 0.1) % (Math.PI * 2); // Individual spiral offset
         
-        // 计算螺旋角度
-        const angle = progress * spiralTurns * Math.PI * 2;
+        // Interpolate angle with gentle spiral
+        const angleSpiral = startAngle + (targetAngle - startAngle) * progress + 
+                           Math.sin(progress * Math.PI) * spiralTurns + spiralOffset * (1 - progress);
         
-        // 基础线性插值
-        const baseX = start.x + (target.x - start.x) * progress;
-        const baseY = start.y + (target.y - start.y) * progress;
-        const baseZ = start.z + (target.z - start.z) * progress;
+        // Smooth radius interpolation with slight inward curve
+        const radiusProgress = this.elegantSigmoidEasing(progress);
+        const currentRadius = startRadius + (targetRadius - startRadius) * radiusProgress;
         
-        // 添加螺旋偏移
-        const spiralX = Math.cos(angle) * spiralRadius;
-        const spiralY = Math.sin(angle) * spiralRadius;
-        const spiralZ = Math.sin(angle * 0.5) * spiralRadius * 0.3;
+        // Add subtle inward pull for magnetic effect
+        const magneticPull = Math.sin(progress * Math.PI) * 0.15 * startRadius;
+        const finalRadius = currentRadius - magneticPull;
+
+        // Convert back to cartesian coordinates
+        const x = finalRadius * Math.cos(angleSpiral);
+        const y = finalRadius * Math.sin(angleSpiral);
+        
+        // Z interpolation with gentle wave
+        const z = start.z + (target.z - start.z) * progress + 
+                 Math.sin(progress * Math.PI * 2) * 0.1 * (1 - progress);
+
+        return { x, y, z };
+    }
+
+    // Calculate beautiful blue-to-orange X-shape gradient color
+    calculateXShapeGradientColor(progress, particleIndex, targetPosition) {
+        // Calculate distance from X center (0,0) to create radial gradient
+        const centerDistance = Math.sqrt(targetPosition.x * targetPosition.x + targetPosition.y * targetPosition.y);
+        const maxDistance = 4; // Maximum distance in the X shape
+        const normalizedDistance = Math.min(centerDistance / maxDistance, 1);
+        
+        // Energy awakening progression
+        const energyIntensity = this.elegantSigmoidEasing(progress);
+        
+        // Blue to Orange gradient based on distance from center
+        // Center (distance 0): Warm Orange/Gold
+        // Outer (distance 1): Deep Blue
+        
+        // Orange/Gold color (center)
+        const centerColor = {
+            r: 1.0,   // Full red
+            g: 0.65,  // Rich orange-gold
+            b: 0.0    // No blue
+        };
+        
+        // Deep Blue color (outer)
+        const outerColor = {
+            r: 0.1,   // Minimal red
+            g: 0.2,   // Some green for depth
+            b: 0.8    // Strong blue
+        };
+        
+        // Smooth gradient interpolation
+        const gradientT = Math.pow(normalizedDistance, 0.7); // Slight curve for more natural distribution
+        
+        const baseR = centerColor.r + (outerColor.r - centerColor.r) * gradientT;
+        const baseG = centerColor.g + (outerColor.g - centerColor.g) * gradientT;
+        const baseB = centerColor.b + (outerColor.b - centerColor.b) * gradientT;
+        
+        // Apply energy intensity for awakening effect
+        const finalR = baseR * (0.3 + energyIntensity * 0.7);
+        const finalG = baseG * (0.3 + energyIntensity * 0.7);
+        const finalB = baseB * (0.3 + energyIntensity * 0.7);
+        
+        // Add slight particle variation for organic feel
+        const variation = Math.sin(particleIndex * 0.15) * 0.05;
         
         return {
-            position: {
-                x: baseX + spiralX,
-                y: baseY + spiralY,
-                z: baseZ + spiralZ
-            }
+            r: Math.max(0.05, Math.min(1.0, finalR + variation)),
+            g: Math.max(0.05, Math.min(1.0, finalG + variation * 0.5)),
+            b: Math.max(0.1, Math.min(1.0, finalB + variation * 0.3))
         };
     }
 
-    // 计算引力场效果
-    calculateGravitationalField(currentPos, targetPos, progress) {
-        // 引力强度随进度变化
-        const gravityStrength = Math.sin(progress * Math.PI) * 0.1;
+    // Calculate elegant size evolution with natural growth
+    calculateElegantSizeEvolution(progress) {
+        // Natural growth curve - slow start, quick middle, gentle end
+        const growthCurve = this.elegantSigmoidEasing(progress);
         
-        // 计算引力方向
-        const dx = targetPos.x - currentPos.x;
-        const dy = targetPos.y - currentPos.y;
-        const dz = targetPos.z - currentPos.z;
+        // Start small, grow to natural size
+        const minSize = 0.2;
+        const maxSize = 1.0;
         
-        // 归一化并应用强度
-        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (distance > 0.001) {
-            return {
-                x: (dx / distance) * gravityStrength,
-                y: (dy / distance) * gravityStrength,
-                z: (dz / distance) * gravityStrength
-            };
-        }
-        
-        return { x: 0, y: 0, z: 0 };
+        return minSize + (maxSize - minSize) * growthCurve;
     }
 
-    // 获取汇聚阶段的颜色
-    getConvergenceColor(progress, intensity, phase) {
-        let r, g, b;
-        
-        switch (phase) {
-            case 1: // 引力觉醒：从暗淡开始
-                r = 0.1 + intensity * 0.2;
-                g = 0.1 + intensity * 0.3;
-                b = 0.3 + intensity * 0.4;
-                break;
-                
-            case 2: // 螺旋汇聚：能量增强
-                r = 0.2 + intensity * 0.3;
-                g = 0.3 + intensity * 0.4;
-                b = 0.6 + intensity * 0.3;
-                break;
-                
-            case 3: // 精确定位：到达目标颜色
-                r = 0.3 + intensity * 0.2;
-                g = 0.4 + intensity * 0.3;
-                b = 0.8 + intensity * 0.1;
-                break;
-                
-            default:
-                r = 0.1;
-                g = 0.1;
-                b = 0.3;
-        }
-        
-        return { r, g, b };
-    }
-
-    // 计算汇聚阶段的大小
-    calculateConvergenceSize(progress, intensity, phase) {
-        switch (phase) {
-            case 1: // 引力觉醒：轻微增长
-                return 0.5 + intensity;
-                
-            case 2: // 螺旋汇聚：动态变化
-                const spiral = Math.sin(progress * Math.PI * 3) * 0.1;
-                return 0.7 + intensity * 0.8 + spiral;
-                
-            case 3: // 精确定位：稳定到目标大小
-                return 0.9 + intensity * 0.3;
-                
-            default:
-                return 0.5;
-        }
-    }
-
-    // 专门的平滑缓动函数
-    smoothConvergenceEasing(t) {
-        // 使用三次贝塞尔曲线创造优雅的加速和减速
-        return t * t * (3 - 2 * t); // smoothstep
-    }
-
-    // Helper function for organic color generation
-    getOrganicColor(seed, intensity) {
-        // Generate organic color based on particle personality
-        const hue = seed * 360; // Full spectrum based on seed
-        const saturation = 0.6 + seed * 0.4; // 60-100% saturation
-        const lightness = 0.3 + intensity * 0.5; // 30-80% lightness based on energy
-
-        // Convert HSL to RGB for organic color variation
-        const h = hue / 60;
-        const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
-        const x = c * (1 - Math.abs((h % 2) - 1));
-        const m = lightness - c / 2;
+    // HSL to RGB conversion helper
+    hslToRgb(h, s, l) {
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+        const m = l - c / 2;
 
         let r, g, b;
-        if (h < 1) { r = c; g = x; b = 0; }
-        else if (h < 2) { r = x; g = c; b = 0; }
-        else if (h < 3) { r = 0; g = c; b = x; }
-        else if (h < 4) { r = 0; g = x; b = c; }
-        else if (h < 5) { r = x; g = 0; b = c; }
+        if (h < 1/6) { r = c; g = x; b = 0; }
+        else if (h < 2/6) { r = x; g = c; b = 0; }
+        else if (h < 3/6) { r = 0; g = c; b = x; }
+        else if (h < 4/6) { r = 0; g = x; b = c; }
+        else if (h < 5/6) { r = x; g = 0; b = c; }
         else { r = c; g = 0; b = x; }
 
         return {
-            r: Math.max(0.1, Math.min(1.0, r + m)),
-            g: Math.max(0.1, Math.min(1.0, g + m)),
-            b: Math.max(0.3, Math.min(1.0, b + m)) // Ensure some blue for twilight feel
+            r: Math.max(0.05, Math.min(1.0, r + m)),
+            g: Math.max(0.05, Math.min(1.0, g + m)),
+            b: Math.max(0.2, Math.min(1.0, b + m)) // Maintain twilight blue base
         };
     }
 
-    // Stage 2: Organic Particle Breathing - Living X Shape
+    // Stage 2: Seamless Elegant Particle Breathing - Living X Shape
     updateBreathingState() {
-        const duration = STAGE_DURATIONS.X_BREATHING; // Use consistent timing
+        const duration = STAGE_DURATIONS.X_BREATHING;
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
         this.stateProgress = Math.min(phaseTime / duration, 1);
         
@@ -1282,86 +1087,112 @@ class ParticleAnimation {
         const sizes = this.particles.geometry.attributes.size.array;
         const colors = this.particles.geometry.attributes.color.array;
         
-        // 简化呼吸参数
-        const waveSpeed = 0.003;  // 减慢速度
-        const waveIntensity = 0.08;  // 减少强度
-        const sizeWaveIntensity = 0.03;
+        // Three-phase breathing for seamless transition
+        const correctionPhase = 0.15;  // Position correction (0-15%)
+        const blendPhase = 0.25;       // Breathing blend-in (15-25%)
+        const breathingPhase = 1.0;    // Full breathing (25-100%)
         
-        // 只使用主要波形
-        const primaryWave = this.globalTime * waveSpeed;
+        // Elegant breathing parameters
+        const breathingFreq = 0.002; // Slower, more meditative breathing
+        const breathingTime = this.globalTime * breathingFreq;
         
-        // Smooth transition blending for first 20% of breathing phase
-        const isEarlyBreathing = this.stateProgress < 0.2;
-        const blendFactor = isEarlyBreathing ? this.stateProgress / 0.2 : 1.0;
-        
-        // Apply ultra-elegant wave propagation
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
             
-            // Enhanced distance calculations - use current positions for continuity
-            const centerX = 0;
-            const centerY = 0;
-            const baseX = this.currentPositions.length > 0 ? this.currentPositions[index] : this.positions1[index];
-            const baseY = this.currentPositions.length > 0 ? this.currentPositions[index + 1] : this.positions1[index + 1];
-            const baseZ = this.currentPositions.length > 0 ? this.currentPositions[index + 2] : this.positions1[index + 2];
-            const particleX = baseX;
-            const particleY = baseY;
-            const distanceFromCenter = Math.sqrt(
-                (particleX - centerX) * (particleX - centerX) + 
-                (particleY - centerY) * (particleY - centerY)
-            );
+            // Get captured positions from convergence end
+            const capturedX = this.currentPositions.length > 0 ? this.currentPositions[index] : this.positions1[index];
+            const capturedY = this.currentPositions.length > 0 ? this.currentPositions[index + 1] : this.positions1[index + 1];
+            const capturedZ = this.currentPositions.length > 0 ? this.currentPositions[index + 2] : this.positions1[index + 2];
             
-            // Radial component for wave patterns
-            const radialPhase = distanceFromCenter * 0.6;
-            const individualPhase = this.particlePhases[i];
+            // Target perfect X positions
+            const targetX = this.positions1[index];
+            const targetY = this.positions1[index + 1];
+            const targetZ = this.positions1[index + 2];
             
-            // 简化波形计算
-            const wave1 = Math.sin(primaryWave + radialPhase);
-            const normalizedWave = wave1;
+            let finalX, finalY, finalZ;
             
-            // 最简单的波形处理
-            const smoothedWave = normalizedWave;
+            if (this.stateProgress <= correctionPhase) {
+                // Phase 1: Gentle position correction to perfect X alignment
+                const correctionProgress = this.stateProgress / correctionPhase;
+                const smoothCorrection = this.elegantSigmoidEasing(correctionProgress);
+                
+                finalX = capturedX + (targetX - capturedX) * smoothCorrection;
+                finalY = capturedY + (targetY - capturedY) * smoothCorrection;
+                finalZ = capturedZ + (targetZ - capturedZ) * smoothCorrection;
+                
+            } else if (this.stateProgress <= blendPhase) {
+                // Phase 2: Breathing animation blend-in
+                const blendProgress = (this.stateProgress - correctionPhase) / (blendPhase - correctionPhase);
+                const breathingBlend = this.elegantSigmoidEasing(blendProgress);
+                
+                // Calculate breathing parameters
+                const centerDistance = Math.sqrt(targetX * targetX + targetY * targetY);
+                const normalizedDistance = Math.min(centerDistance / 4, 1);
+                const angle = Math.atan2(targetY, targetX);
+                
+                // Gentle breathing wave
+                const breathingWave = Math.sin(breathingTime + normalizedDistance * 0.5);
+                const breathingIntensity = 0.05 * breathingBlend; // Gradual breathing introduction
+                
+                // Radial breathing movement
+                const radialMovement = breathingWave * breathingIntensity * normalizedDistance;
+                const breathingX = Math.cos(angle) * radialMovement;
+                const breathingY = Math.sin(angle) * radialMovement;
+                const breathingZ = breathingWave * breathingIntensity * 0.3;
+                
+                finalX = targetX + breathingX;
+                finalY = targetY + breathingY;
+                finalZ = targetZ + breathingZ;
+                
+            } else {
+                // Phase 3: Full breathing cycle
+                const centerDistance = Math.sqrt(targetX * targetX + targetY * targetY);
+                const normalizedDistance = Math.min(centerDistance / 4, 1);
+                const angle = Math.atan2(targetY, targetX);
+                
+                // Full breathing wave
+                const breathingWave = Math.sin(breathingTime + normalizedDistance * 0.5);
+                const breathingIntensity = 0.05; // Full breathing movement
+                
+                // Radial breathing movement
+                const radialMovement = breathingWave * breathingIntensity * normalizedDistance;
+                const breathingX = Math.cos(angle) * radialMovement;
+                const breathingY = Math.sin(angle) * radialMovement;
+                const breathingZ = breathingWave * breathingIntensity * 0.3;
+                
+                finalX = targetX + breathingX;
+                finalY = targetY + breathingY;
+                finalZ = targetZ + breathingZ;
+            }
             
-            // Distance-based intensity modulation
-            const intensityMultiplier = Math.max(0.2, 1 - distanceFromCenter * 0.12);
-            const finalIntensity = smoothedWave * waveIntensity * intensityMultiplier * blendFactor;
+            // Apply calculated positions
+            positions[index] = finalX;
+            positions[index + 1] = finalY;
+            positions[index + 2] = finalZ;
             
-            // Enhanced radial breathing with spiral component
-            const angle = Math.atan2(particleY - centerY, particleX - centerX);
-            const spiralOffset = Math.sin(primaryWave * 3 + radialPhase) * 0.02;
-            const radialX = Math.cos(angle + spiralOffset);
-            const radialY = Math.sin(angle + spiralOffset);
+            // Synchronized size breathing
+            const breathingWave = Math.sin(breathingTime + Math.sqrt(targetX * targetX + targetY * targetY) / 8);
+            const sizeBlend = this.stateProgress > blendPhase ? 1.0 : Math.max(0, (this.stateProgress - correctionPhase) / (blendPhase - correctionPhase));
+            const sizePulse = Math.abs(breathingWave) * 0.02 * sizeBlend;
+            sizes[i] = this.particleSizes[i] + sizePulse;
             
-            // Apply breathing movement with micro-variations
-            const microVariationX = Math.sin(individualPhase + primaryWave * 2) * 0.005 * blendFactor;
-            const microVariationY = Math.cos(individualPhase + primaryWave * 2) * 0.005 * blendFactor;
-            
-            positions[index] = baseX + radialX * finalIntensity + microVariationX;
-            positions[index + 1] = baseY + radialY * finalIntensity + microVariationY;
-            positions[index + 2] = baseZ + finalIntensity * 0.25;
-            
-            // Enhanced size breathing with smooth pulsing
-            const sizePhase = primaryWave + radialPhase * 0.4 + individualPhase;
-            const sizeWave = Math.sin(sizePhase) * sizeWaveIntensity;
-            const smoothSizeWave = this.ultraSmoothEasing((sizeWave + sizeWaveIntensity) / (sizeWaveIntensity * 2)) * sizeWaveIntensity * 2 - sizeWaveIntensity;
-            sizes[i] = this.particleSizes[i] + smoothSizeWave;
-            
-            // Subtle color breathing for extra life
-            const colorIntensity = Math.abs(finalIntensity) * 0.1;
-            const baseColor = i % 2 === 0 ? [0.3, 0.4, 0.9] : [0.5, 0.3, 0.8];
-            colors[index] = baseColor[0] + colorIntensity;
-            colors[index + 1] = baseColor[1] + colorIntensity * 0.7;
-            colors[index + 2] = baseColor[2] + colorIntensity * 0.3;
+            // Beautiful gradient breathing with blue-to-orange colors
+            const colorPulse = Math.abs(breathingWave) * 0.08 * sizeBlend;
+            const targetPos = { x: targetX, y: targetY, z: targetZ };
+            const baseColor = this.calculateXShapeGradientColor(1.0, i, targetPos); // Full energy for settled state
+            colors[index] = Math.min(1.0, baseColor.r + colorPulse);
+            colors[index + 1] = Math.min(1.0, baseColor.g + colorPulse * 0.7);
+            colors[index + 2] = Math.min(1.0, baseColor.b + colorPulse * 0.5);
         }
         
         this.particles.geometry.attributes.position.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
         this.particles.geometry.attributes.color.needsUpdate = true;
         
-        // Smooth transition to activation with buffer
-        if (this.stateProgress >= 0.95) {  // Start transition earlier
+        // Perfect completion transition
+        if (this.stateProgress >= 1.0) {
             if (this.currentState === ANIMATION_STATES.X_BREATHING) {
-                console.log('Ultra-smooth breathing complete, starting activation');
+                console.log('Seamless breathing complete with perfect harmony');
                 this.loadingComplete = true;
                 this.transitionToState(ANIMATION_STATES.ACTIVATION);
             }
