@@ -1017,114 +1017,112 @@ class ParticleAnimation {
         }
     }
     
-    // Stage 1: Enhanced Organic Particle Convergence to X Shape
+    // Stage 1: 极简优雅聚合 - 丝滑流畅的有机收敛
     updateConvergingState() {
         const duration = STAGE_DURATIONS.CONVERGING;
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
         this.stateProgress = Math.min(phaseTime / duration, 1);
-        
-        // 暂时禁用fluid dynamics以提高性能
-        // this.updateParticleNeighbors();
 
         const positions = this.particles.geometry.attributes.position.array;
         const colors = this.particles.geometry.attributes.color.array;
         const sizes = this.particles.geometry.attributes.size.array;
 
+        // 全局时间用于有机效果
+        const time = this.globalTime * 0.001;
+
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
 
-            // Get enhanced particle personality
-            const particleDelay = this.particleDelays[i];
+            // 粒子基础属性
             const particleSeed = this.particleSeeds[i];
-            const curvature = this.particleCurvatures[i];
             const energy = this.particleEnergies[i];
-            const lifePhase = this.particleLifePhases[i];
-            const noiseOffset = this.particleNoiseOffsets[i];
-            const mass = this.particleMasses[i];
-            const friction = this.particleFrictions[i];
-            const temperature = this.particleTemperatures[i];
-            const organicSeeds = this.particleOrganicSeeds[i];
             
-            // Apply organic noise for natural movement
-            const time = this.globalTime * 0.001;
-            const noiseX = perlinNoise(time + noiseOffset.x, noiseOffset.y, 123) * 0.02;
-            const noiseY = perlinNoise(time + noiseOffset.y, noiseOffset.z, 456) * 0.02;
-            const noiseZ = perlinNoise(time + noiseOffset.z, noiseOffset.x, 789) * 0.01;
+            // 起始和目标位置
+            const startX = this.spreadPositions[index];
+            const startY = this.spreadPositions[index + 1];
+            const startZ = this.spreadPositions[index + 2];
             
-            // Calculate fluid dynamics influence
-            const fluidForce = this.calculateFluidInfluence(i);
+            const targetX = this.positions1[index];
+            const targetY = this.positions1[index + 1];
+            const targetZ = this.positions1[index + 2];
+
+            // 波浪式延迟：基于距离中心的自然传播
+            const distanceFromCenter = Math.sqrt(startX * startX + startY * startY);
+            const normalizedDistance = Math.min(distanceFromCenter / 3, 1);
+            const waveDelay = normalizedDistance * 0.3; // 30%的延迟范围
             
-            // Apply temperature-based motion
-            const thermalMotion = this.calculateThermalMotion(i, temperature, time);
-
-            // Enhanced individual particle timing with staggered delays
-            const adjustedDelay = particleDelay * 0.7; // Reduce delay impact for smoother overall flow
-            const individualProgress = Math.max(0, Math.min(1, (this.stateProgress - adjustedDelay) / (1 - adjustedDelay)));
+            // 个体进度计算
+            const adjustedProgress = Math.max(0, Math.min(1, (this.stateProgress - waveDelay) / (1 - waveDelay)));
             
-            // 使用最简单的缓动函数
-            const organicProgress = individualProgress * individualProgress * (3 - 2 * individualProgress); // smoothstep
+            // 使用三次贝塞尔缓动创造丝滑效果
+            const smoothProgress = this.createSilkyEasing(adjustedProgress);
 
-            // Start and target positions
-            const start = {
-                x: this.spreadPositions[index],
-                y: this.spreadPositions[index + 1],
-                z: this.spreadPositions[index + 2]
-            };
-            const target = {
-                x: this.positions1[index],
-                y: this.positions1[index + 1],
-                z: this.positions1[index + 2]
-            };
+            // 优雅的贝塞尔路径 - 轻微弧度增加自然感
+            const midPointOffset = 0.2 + Math.sin(particleSeed * 6.28) * 0.1;
+            const controlX = (startX + targetX) / 2 + Math.sin(Math.atan2(targetY - startY, targetX - startX) + Math.PI * 0.5) * midPointOffset;
+            const controlY = (startY + targetY) / 2 + Math.cos(Math.atan2(targetY - startY, targetX - startX) + Math.PI * 0.5) * midPointOffset;
+            const controlZ = (startZ + targetZ) / 2 + Math.sin(smoothProgress * Math.PI) * 0.1;
 
-            // Generate organic curved path instead of straight line
-            const dynamicCurvature = curvature * (1 - organicProgress * 0.8); // Reduce curvature as particle approaches target
-            const currentPos = generateOrganicCurve(start, target, organicProgress, dynamicCurvature, particleSeed);
+            // 二次贝塞尔插值
+            const t = smoothProgress;
+            const invT = 1 - t;
+            positions[index] = invT * invT * startX + 2 * invT * t * controlX + t * t * targetX;
+            positions[index + 1] = invT * invT * startY + 2 * invT * t * controlY + t * t * targetY;
+            positions[index + 2] = invT * invT * startZ + 2 * invT * t * controlZ + t * t * targetZ;
 
-            // Add organic breathing motion during convergence
-            const breathingTime = this.globalTime * 0.001 + lifePhase;
-            const distanceToTarget = Math.sqrt(
-                Math.pow(currentPos.x - target.x, 2) + 
-                Math.pow(currentPos.y - target.y, 2) + 
-                Math.pow(currentPos.z - target.z, 2)
-            );
-            const breathingIntensity = Math.min(0.08, distanceToTarget * 0.02); // Breathing based on distance
-            const breathingX = Math.sin(breathingTime * 2.0 + particleSeed) * breathingIntensity;
-            const breathingY = Math.cos(breathingTime * 2.3 + particleSeed) * breathingIntensity;
-            const breathingZ = Math.sin(breathingTime * 1.7 + particleSeed) * breathingIntensity * 0.5;
+            // 轻微的有机呼吸效果
+            const breathingIntensity = (1 - smoothProgress) * 0.01; // 聚合时逐渐减弱
+            const breathingPhase = time * 2 + particleSeed * 3.14;
+            positions[index] += Math.sin(breathingPhase) * breathingIntensity;
+            positions[index + 1] += Math.cos(breathingPhase * 1.1) * breathingIntensity;
+            positions[index + 2] += Math.sin(breathingPhase * 0.8) * breathingIntensity * 0.5;
 
-            // Apply position with organic breathing
-            positions[index] = currentPos.x + breathingX;
-            positions[index + 1] = currentPos.y + breathingY;
-            positions[index + 2] = currentPos.z + breathingZ;
+            // 丝滑的颜色觉醒 - 从深暗到明亮
+            const colorIntensity = this.createSilkyEasing(smoothProgress);
+            const breathingGlow = Math.sin(time * 3 + particleSeed) * 0.1 + 0.9; // 轻微脉冲
+            
+            // 优雅的蓝紫色渐变
+            const baseR = 0.2 + colorIntensity * 0.3;
+            const baseG = 0.3 + colorIntensity * 0.4;
+            const baseB = 0.7 + colorIntensity * 0.3;
+            
+            colors[index] = baseR * breathingGlow * energy;
+            colors[index + 1] = baseG * breathingGlow * energy;
+            colors[index + 2] = baseB * breathingGlow * energy;
 
-            // Gradual color awakening with smoother transition
-            const colorIntensity = organicEasing.ultraSmooth(organicProgress);
-            const energyGlow = energy * colorIntensity;
-
-            // Individual color personality based on particle seed
-            const baseColor = this.getOrganicColor(particleSeed, energyGlow);
-            colors[index] = baseColor.r;
-            colors[index + 1] = baseColor.g;
-            colors[index + 2] = baseColor.b;
-
-            // Organic size growth - particles grow as they gain life
-            const sizeGrowth = organicEasing.organicBounce(organicProgress);
-            sizes[i] = this.particleSizes[i] * (0.3 + sizeGrowth * 0.7) * energy;
+            // 有机的大小变化 - 生命力觉醒效果
+            const sizeGrowth = this.createSilkyEasing(smoothProgress);
+            const sizePulse = Math.sin(time * 2.5 + particleSeed * 2) * 0.05 + 0.95; // 轻微脉冲
+            const finalSize = (0.4 + sizeGrowth * 0.6) * sizePulse * energy;
+            
+            sizes[i] = this.particleSizes[i] * finalSize;
         }
 
-        // Update geometry
+        // 更新几何体
         this.particles.geometry.attributes.position.needsUpdate = true;
         this.particles.geometry.attributes.color.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
 
-        // Smooth transition to breathing with buffer
-        if (this.stateProgress >= 0.95) {  // Start transition earlier
+        // 平滑过渡到下一阶段
+        if (this.stateProgress >= 0.95) {
             if (this.currentState === ANIMATION_STATES.CONVERGING) {
-                console.log('Organic convergence complete, starting breathing phase');
+                console.log('Silky convergence complete - elegant X formation achieved');
                 this.transitionToState(ANIMATION_STATES.X_BREATHING);
             }
         }
     }
+
+    // 创造丝滑的缓动效果
+    createSilkyEasing(t) {
+        // 使用三次贝塞尔曲线 (0.25, 0.46, 0.45, 0.94) 创造丝滑效果
+        if (t <= 0) return 0;
+        if (t >= 1) return 1;
+        
+        // 近似贝塞尔曲线的丝滑缓动
+        return t * t * (3 - 2 * t) * (1 + 0.3 * Math.sin(t * Math.PI));
+    }
+
+
 
     // Helper function for organic color generation
     getOrganicColor(seed, intensity) {
