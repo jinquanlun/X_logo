@@ -149,8 +149,963 @@ const organicEasing = {
         const staggerDelay = (particleIndex / totalParticles) * staggerAmount;
         const adjustedT = Math.max(0, Math.min(1, (t - staggerDelay) / (1 - staggerAmount)));
         return organicEasing.ultraSmooth(adjustedT);
+    },
+
+    // ENHANCED: Emotional easing functions for expressive transitions
+    emotionalEasing: {
+        // Anticipation - builds tension before release
+        anticipation: (t, intensity = 1.0) => {
+            const anticipationPhase = Math.min(t * 1.5, 1);
+            const releasePhase = Math.max(0, (t - 0.7) / 0.3);
+            
+            if (t < 0.7) {
+                // Build tension with slight backward movement
+                return t * 0.7 - Math.sin(anticipationPhase * Math.PI * 2) * 0.1 * intensity;
+            } else {
+                // Explosive release
+                return 0.49 + organicEasing.springDamped(releasePhase) * 0.51;
+            }
+        },
+
+        // Excitement - rapid energetic movement with overshoot
+        excitement: (t, intensity = 1.0) => {
+            const baseProgress = organicEasing.ultraSmooth(t);
+            const excitement = Math.sin(t * Math.PI * 6) * Math.exp(-t * 3) * 0.15 * intensity;
+            const overshoot = t > 0.8 ? Math.sin((t - 0.8) * Math.PI * 5) * 0.05 * intensity : 0;
+            return Math.min(1, baseProgress + excitement + overshoot);
+        },
+
+        // Calm - serene, flowing movement like water
+        calm: (t, intensity = 1.0) => {
+            const primary = organicEasing.liquidFlow(t);
+            const gentleWave = Math.sin(t * Math.PI * 1.5) * 0.03 * intensity;
+            return primary + gentleWave;
+        },
+
+        // Release - gradual buildup followed by satisfying release
+        release: (t, intensity = 1.0) => {
+            if (t < 0.6) {
+                // Gradual buildup
+                const buildupT = t / 0.6;
+                return Math.pow(buildupT, 3) * 0.6;
+            } else {
+                // Satisfying release
+                const releaseT = (t - 0.6) / 0.4;
+                return 0.6 + organicEasing.organicBounce(releaseT) * 0.4;
+            }
+        },
+
+        // Harmony - balanced, musical progression
+        harmony: (t, intensity = 1.0) => {
+            const base = organicEasing.ultraSmooth(t);
+            const harmonicSeries = (
+                Math.sin(t * Math.PI * 2) * 0.05 +
+                Math.sin(t * Math.PI * 4) * 0.025 +
+                Math.sin(t * Math.PI * 8) * 0.0125
+            ) * intensity;
+            return base + harmonicSeries;
+        }
     }
 };
+
+// ENHANCED: Emotional Transition Engine for expressive animation transitions
+class EmotionalTransitionEngine {
+    constructor() {
+        this.emotionalStates = {
+            anticipation: { intensity: 0, target: 0, decay: 0.95 },
+            excitement: { intensity: 0, target: 0, decay: 0.9 },
+            calm: { intensity: 0, target: 0, decay: 0.98 },
+            release: { intensity: 0, target: 0, decay: 0.92 },
+            harmony: { intensity: 0, target: 0, decay: 0.96 }
+        };
+        
+        this.currentDominantEmotion = 'calm';
+        this.emotionalBlendWeights = {};
+        this.transitionHistory = [];
+        this.maxHistoryLength = 10;
+    }
+
+    // Calculate emotional intensity based on animation state and particle behavior
+    calculateEmotionalIntensity(animationState, stateProgress, particleEnergy) {
+        let targetEmotions = {};
+
+        switch (animationState) {
+            case ANIMATION_STATES.CONVERGING:
+                if (stateProgress < 0.3) {
+                    targetEmotions.anticipation = 0.8;
+                    targetEmotions.calm = 0.2;
+                } else if (stateProgress < 0.7) {
+                    targetEmotions.excitement = 0.6;
+                    targetEmotions.anticipation = 0.4;
+                } else {
+                    targetEmotions.harmony = 0.7;
+                    targetEmotions.calm = 0.3;
+                }
+                break;
+
+            case ANIMATION_STATES.X_BREATHING:
+                targetEmotions.calm = 0.9;
+                targetEmotions.harmony = 0.1;
+                break;
+
+            case ANIMATION_STATES.ACTIVATION:
+                if (stateProgress < 0.5) {
+                    targetEmotions.anticipation = 0.9;
+                    targetEmotions.excitement = 0.1;
+                } else {
+                    targetEmotions.excitement = 0.8;
+                    targetEmotions.release = 0.2;
+                }
+                break;
+
+            case ANIMATION_STATES.MORPHING:
+                if (stateProgress < 0.2) {
+                    targetEmotions.anticipation = 0.7;
+                    targetEmotions.excitement = 0.3;
+                } else if (stateProgress < 0.8) {
+                    targetEmotions.excitement = 0.6;
+                    targetEmotions.harmony = 0.4;
+                } else {
+                    targetEmotions.release = 0.5;
+                    targetEmotions.calm = 0.5;
+                }
+                break;
+
+            case ANIMATION_STATES.DISSIPATING:
+                targetEmotions.release = 0.8;
+                targetEmotions.calm = 0.2;
+                break;
+        }
+
+        // Update emotional states smoothly
+        for (const emotion in this.emotionalStates) {
+            const state = this.emotionalStates[emotion];
+            state.target = targetEmotions[emotion] || 0;
+            
+            // Smooth interpolation towards target
+            const diff = state.target - state.intensity;
+            state.intensity += diff * 0.1; // Smooth transition speed
+            
+            // Apply decay
+            state.intensity *= state.decay;
+        }
+
+        // Calculate dominant emotion
+        this.updateDominantEmotion();
+        
+        return this.emotionalStates;
+    }
+
+    updateDominantEmotion() {
+        let maxIntensity = 0;
+        let dominantEmotion = 'calm';
+
+        for (const emotion in this.emotionalStates) {
+            if (this.emotionalStates[emotion].intensity > maxIntensity) {
+                maxIntensity = this.emotionalStates[emotion].intensity;
+                dominantEmotion = emotion;
+            }
+        }
+
+        if (dominantEmotion !== this.currentDominantEmotion) {
+            this.transitionHistory.push({
+                from: this.currentDominantEmotion,
+                to: dominantEmotion,
+                timestamp: performance.now(),
+                intensity: maxIntensity
+            });
+
+            if (this.transitionHistory.length > this.maxHistoryLength) {
+                this.transitionHistory.shift();
+            }
+        }
+
+        this.currentDominantEmotion = dominantEmotion;
+    }
+
+    // Modulate easing function based on current emotional state
+    modulateEasingWithEmotion(baseEasing, t, particleIndex = 0) {
+        let result = baseEasing(t);
+        
+        // Apply emotional modulation
+        for (const emotion in this.emotionalStates) {
+            const intensity = this.emotionalStates[emotion].intensity;
+            if (intensity > 0.01) {
+                const emotionalEasing = organicEasing.emotionalEasing[emotion];
+                if (emotionalEasing) {
+                    const emotionalResult = emotionalEasing(t, intensity);
+                    result = result * (1 - intensity) + emotionalResult * intensity;
+                }
+            }
+        }
+
+        return Math.max(0, Math.min(1, result));
+    }
+
+    // Get emotional color modulation
+    getEmotionalColorModulation() {
+        const modulation = { r: 1, g: 1, b: 1 };
+        
+        // Apply color shifts based on dominant emotion
+        switch (this.currentDominantEmotion) {
+            case 'anticipation':
+                modulation.r = 1.1;
+                modulation.g = 0.95;
+                modulation.b = 1.05;
+                break;
+            case 'excitement':
+                modulation.r = 1.2;
+                modulation.g = 1.1;
+                modulation.b = 0.9;
+                break;
+            case 'calm':
+                modulation.r = 0.95;
+                modulation.g = 1.0;
+                modulation.b = 1.1;
+                break;
+            case 'release':
+                modulation.r = 1.0;
+                modulation.g = 1.1;
+                modulation.b = 1.15;
+                break;
+            case 'harmony':
+                modulation.r = 1.05;
+                modulation.g = 1.05;
+                modulation.b = 1.05;
+                break;
+        }
+
+        // Scale by dominant emotion intensity
+        const intensity = this.emotionalStates[this.currentDominantEmotion].intensity;
+        const scale = 1 + (intensity - 1) * 0.3;
+        
+        return {
+            r: 1 + (modulation.r - 1) * scale,
+            g: 1 + (modulation.g - 1) * scale,
+            b: 1 + (modulation.b - 1) * scale
+        };
+    }
+
+    // Get emotional motion influence
+    getEmotionalMotionInfluence(particleIndex) {
+        const influence = { amplitude: 1, frequency: 1, phase: 0 };
+        const dominantIntensity = this.emotionalStates[this.currentDominantEmotion].intensity;
+
+        switch (this.currentDominantEmotion) {
+            case 'anticipation':
+                influence.amplitude = 1 + dominantIntensity * 0.2;
+                influence.frequency = 1 + dominantIntensity * 0.5;
+                influence.phase = particleIndex * 0.1;
+                break;
+            case 'excitement':
+                influence.amplitude = 1 + dominantIntensity * 0.8;
+                influence.frequency = 1 + dominantIntensity * 2.0;
+                influence.phase = particleIndex * 0.2;
+                break;
+            case 'calm':
+                influence.amplitude = 1 - dominantIntensity * 0.3;
+                influence.frequency = 1 - dominantIntensity * 0.4;
+                influence.phase = particleIndex * 0.05;
+                break;
+            case 'release':
+                influence.amplitude = 1 + dominantIntensity * 0.6;
+                influence.frequency = 1 - dominantIntensity * 0.2;
+                influence.phase = particleIndex * 0.15;
+                break;
+            case 'harmony':
+                influence.amplitude = 1 + Math.sin(particleIndex * 0.1) * dominantIntensity * 0.3;
+                influence.frequency = 1 + Math.cos(particleIndex * 0.08) * dominantIntensity * 0.4;
+                influence.phase = particleIndex * 0.12;
+                break;
+        }
+
+        return influence;
+    }
+}
+
+// ENHANCED: Intelligent Rhythm Control for adaptive timing
+class IntelligentRhythmController {
+    constructor() {
+        this.convergenceAnalyzer = {
+            lastAnalysis: 0,
+            analysisInterval: 100, // ms
+            convergenceRate: 0,
+            energyDistribution: 0,
+            harmonicBalance: 0
+        };
+        
+        this.adaptiveTimings = {
+            convergingMultiplier: 1.0,
+            breathingMultiplier: 1.0,
+            activationMultiplier: 1.0,
+            morphingMultiplier: 1.0,
+            dissipatingMultiplier: 1.0
+        };
+        
+        this.rhythmHistory = [];
+        this.maxRhythmHistory = 20;
+    }
+
+    // Analyze particle convergence state and energy distribution
+    analyzeConvergenceState(positions, targetPositions, currentState) {
+        const now = performance.now();
+        if (now - this.convergenceAnalyzer.lastAnalysis < this.convergenceAnalyzer.analysisInterval) {
+            return this.convergenceAnalyzer;
+        }
+
+        const particleCount = positions.length / 3;
+        let totalDistance = 0;
+        let energyVariance = 0;
+        let harmonicSum = 0;
+
+        // Calculate convergence metrics
+        for (let i = 0; i < particleCount; i++) {
+            const index = i * 3;
+            const dx = positions[index] - targetPositions[index];
+            const dy = positions[index + 1] - targetPositions[index + 1];
+            const dz = positions[index + 2] - targetPositions[index + 2];
+            
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            totalDistance += distance;
+            
+            // Calculate energy distribution
+            const energy = dx * dx + dy * dy + dz * dz;
+            energyVariance += energy;
+            
+            // Calculate harmonic patterns
+            const angle = Math.atan2(dy, dx);
+            harmonicSum += Math.sin(angle * 4) + Math.cos(angle * 6);
+        }
+
+        // Update convergence analyzer
+        this.convergenceAnalyzer.convergenceRate = 1 - (totalDistance / (particleCount * 10)); // Normalized
+        this.convergenceAnalyzer.energyDistribution = energyVariance / particleCount;
+        this.convergenceAnalyzer.harmonicBalance = harmonicSum / particleCount;
+        this.convergenceAnalyzer.lastAnalysis = now;
+
+        // Store rhythm history
+        this.rhythmHistory.push({
+            timestamp: now,
+            convergenceRate: this.convergenceAnalyzer.convergenceRate,
+            energyDistribution: this.convergenceAnalyzer.energyDistribution,
+            state: currentState
+        });
+
+        if (this.rhythmHistory.length > this.maxRhythmHistory) {
+            this.rhythmHistory.shift();
+        }
+
+        return this.convergenceAnalyzer;
+    }
+
+    // Calculate adaptive duration multipliers based on analysis
+    calculateAdaptiveDuration(baseState, stateProgress) {
+        const analysis = this.convergenceAnalyzer;
+        
+        switch (baseState) {
+            case ANIMATION_STATES.CONVERGING:
+                // Faster convergence if particles are naturally coming together
+                if (analysis.convergenceRate > 0.8) {
+                    this.adaptiveTimings.convergingMultiplier = 0.8;
+                } else if (analysis.convergenceRate < 0.3) {
+                    this.adaptiveTimings.convergingMultiplier = 1.3;
+                } else {
+                    this.adaptiveTimings.convergingMultiplier = 1.0;
+                }
+                break;
+
+            case ANIMATION_STATES.X_BREATHING:
+                // Adjust breathing based on harmony
+                const harmonyLevel = Math.abs(analysis.harmonicBalance);
+                this.adaptiveTimings.breathingMultiplier = 0.8 + harmonyLevel * 0.4;
+                break;
+
+            case ANIMATION_STATES.ACTIVATION:
+                // Quick activation if energy is already high
+                if (analysis.energyDistribution > 5) {
+                    this.adaptiveTimings.activationMultiplier = 0.7;
+                } else {
+                    this.adaptiveTimings.activationMultiplier = 1.0;
+                }
+                break;
+
+            case ANIMATION_STATES.MORPHING:
+                // Smooth morphing based on convergence history
+                const avgConvergence = this.getAverageConvergence();
+                this.adaptiveTimings.morphingMultiplier = 0.8 + (1 - avgConvergence) * 0.4;
+                break;
+
+            case ANIMATION_STATES.DISSIPATING:
+                // Graceful dissipation based on energy
+                this.adaptiveTimings.dissipatingMultiplier = 1.0 + analysis.energyDistribution * 0.1;
+                break;
+        }
+
+        return this.adaptiveTimings[this.getTimingKey(baseState)];
+    }
+
+    getTimingKey(state) {
+        const mapping = {
+            [ANIMATION_STATES.CONVERGING]: 'convergingMultiplier',
+            [ANIMATION_STATES.X_BREATHING]: 'breathingMultiplier',
+            [ANIMATION_STATES.ACTIVATION]: 'activationMultiplier',
+            [ANIMATION_STATES.MORPHING]: 'morphingMultiplier',
+            [ANIMATION_STATES.DISSIPATING]: 'dissipatingMultiplier'
+        };
+        return mapping[state] || 'convergingMultiplier';
+    }
+
+    getAverageConvergence() {
+        if (this.rhythmHistory.length === 0) return 0.5;
+        
+        const sum = this.rhythmHistory.reduce((acc, entry) => acc + entry.convergenceRate, 0);
+        return sum / this.rhythmHistory.length;
+    }
+
+    // Get breathing rhythm parameters
+    getBreathingRhythm(globalTime, emotionalState) {
+        const baseFrequency = 0.002;
+        const emotionalModifier = emotionalState === 'calm' ? 0.8 : 
+                                emotionalState === 'excitement' ? 1.5 : 1.0;
+        
+        return {
+            frequency: baseFrequency * emotionalModifier * this.adaptiveTimings.breathingMultiplier,
+            amplitude: 0.05 * this.adaptiveTimings.breathingMultiplier,
+            phase: globalTime * baseFrequency * emotionalModifier
+        };
+    }
+}
+
+// ENHANCED: Multi-Dimensional Interpolator for advanced path calculations
+class MultiDimensionalInterpolator {
+    constructor() {
+        this.tensionControl = {
+            position: 0.5,
+            color: 0.3,
+            size: 0.7,
+            energy: 0.4
+        };
+        
+        this.interpolationMethods = {
+            position: 'advancedBezier',
+            color: 'harmonicBlend',
+            size: 'elasticSpring',
+            energy: 'exponentialFlow'
+        };
+    }
+
+    // Advanced multi-dimensional interpolation
+    interpolateMultiDimensional(start, end, progress, dimensions, particleIndex = 0) {
+        const result = {};
+        
+        for (const dim of dimensions) {
+            switch (this.interpolationMethods[dim]) {
+                case 'advancedBezier':
+                    result[dim] = this.advancedBezierInterpolation(start[dim], end[dim], progress, particleIndex);
+                    break;
+                case 'harmonicBlend':
+                    result[dim] = this.harmonicColorBlend(start[dim], end[dim], progress, particleIndex);
+                    break;
+                case 'elasticSpring':
+                    result[dim] = this.elasticSpringInterpolation(start[dim], end[dim], progress, particleIndex);
+                    break;
+                case 'exponentialFlow':
+                    result[dim] = this.exponentialFlowInterpolation(start[dim], end[dim], progress, particleIndex);
+                    break;
+                default:
+                    result[dim] = this.linearInterpolation(start[dim], end[dim], progress);
+            }
+        }
+        
+        return result;
+    }
+
+    // Advanced Bezier with dynamic control points
+    advancedBezierInterpolation(start, end, progress, particleIndex) {
+        if (typeof start === 'object' && start.x !== undefined) {
+            // Vector interpolation
+            const tension = this.tensionControl.position;
+            const particlePhase = (particleIndex * 0.1) % (Math.PI * 2);
+            
+            // Dynamic control points based on particle characteristics
+            const cp1Offset = {
+                x: Math.sin(particlePhase) * tension * 0.5,
+                y: Math.cos(particlePhase) * tension * 0.5,
+                z: Math.sin(particlePhase * 1.5) * tension * 0.3
+            };
+            
+            const cp2Offset = {
+                x: Math.cos(particlePhase + Math.PI) * tension * 0.3,
+                y: Math.sin(particlePhase + Math.PI) * tension * 0.3,
+                z: Math.cos(particlePhase * 0.7) * tension * 0.2
+            };
+            
+            const cp1 = {
+                x: start.x + (end.x - start.x) * 0.33 + cp1Offset.x,
+                y: start.y + (end.y - start.y) * 0.33 + cp1Offset.y,
+                z: start.z + (end.z - start.z) * 0.33 + cp1Offset.z
+            };
+            
+            const cp2 = {
+                x: start.x + (end.x - start.x) * 0.67 + cp2Offset.x,
+                y: start.y + (end.y - start.y) * 0.67 + cp2Offset.y,
+                z: start.z + (end.z - start.z) * 0.67 + cp2Offset.z
+            };
+            
+            return this.cubicBezierVector(start, cp1, cp2, end, progress);
+        } else {
+            // Scalar interpolation
+            return start + (end - start) * organicEasing.ultraSmooth(progress);
+        }
+    }
+
+    // Harmonic color blending with frequency components
+    harmonicColorBlend(startColor, endColor, progress, particleIndex) {
+        if (!startColor || !endColor) return startColor || endColor;
+        
+        const baseProgress = organicEasing.ultraSmooth(progress);
+        const particlePhase = particleIndex * 0.05;
+        
+        // Add harmonic components for richer color transitions
+        const harmonic1 = Math.sin(progress * Math.PI * 2 + particlePhase) * 0.05;
+        const harmonic2 = Math.sin(progress * Math.PI * 4 + particlePhase * 1.5) * 0.025;
+        const harmonic3 = Math.sin(progress * Math.PI * 8 + particlePhase * 2) * 0.0125;
+        
+        const harmonicProgress = Math.max(0, Math.min(1, 
+            baseProgress + harmonic1 + harmonic2 + harmonic3
+        ));
+        
+        if (typeof startColor === 'object') {
+            return {
+                r: startColor.r + (endColor.r - startColor.r) * harmonicProgress,
+                g: startColor.g + (endColor.g - startColor.g) * harmonicProgress,
+                b: startColor.b + (endColor.b - startColor.b) * harmonicProgress
+            };
+        } else {
+            return startColor + (endColor - startColor) * harmonicProgress;
+        }
+    }
+
+    // Elastic spring interpolation with overshoot
+    elasticSpringInterpolation(start, end, progress, particleIndex) {
+        const tension = this.tensionControl.size;
+        const damping = 0.7;
+        const frequency = 1.5 + (particleIndex % 10) * 0.1;
+        
+        if (progress < 0.7) {
+            // Main movement
+            const adjustedProgress = progress / 0.7;
+            const springProgress = organicEasing.springDamped(adjustedProgress, tension, damping);
+            return start + (end - start) * springProgress;
+        } else {
+            // Elastic settle
+            const settleProgress = (progress - 0.7) / 0.3;
+            const elasticComponent = Math.exp(-settleProgress * 5) * 
+                                   Math.sin(settleProgress * Math.PI * frequency) * 0.1;
+            
+            return end + (end - start) * elasticComponent;
+        }
+    }
+
+    // Exponential flow for energy-like properties
+    exponentialFlowInterpolation(start, end, progress, particleIndex) {
+        const flowRate = this.tensionControl.energy;
+        const particleVariation = 1 + (particleIndex % 7) * 0.05;
+        
+        // Exponential approach to target
+        const exponentialProgress = 1 - Math.exp(-progress * 4 * flowRate * particleVariation);
+        
+        // Add flow turbulence
+        const turbulence = Math.sin(progress * Math.PI * 3 + particleIndex * 0.1) * 
+                          Math.exp(-progress * 2) * 0.05;
+        
+        const finalProgress = Math.max(0, Math.min(1, exponentialProgress + turbulence));
+        
+        return start + (end - start) * finalProgress;
+    }
+
+    // Linear fallback
+    linearInterpolation(start, end, progress) {
+        if (typeof start === 'object') {
+            return {
+                x: start.x + (end.x - start.x) * progress,
+                y: start.y + (end.y - start.y) * progress,
+                z: start.z + (end.z - start.z) * progress
+            };
+        } else {
+            return start + (end - start) * progress;
+        }
+    }
+
+    // Cubic Bezier vector interpolation
+    cubicBezierVector(p0, p1, p2, p3, t) {
+        const oneMinusT = 1 - t;
+        const oneMinusT2 = oneMinusT * oneMinusT;
+        const oneMinusT3 = oneMinusT2 * oneMinusT;
+        const t2 = t * t;
+        const t3 = t2 * t;
+        
+        return {
+            x: oneMinusT3 * p0.x + 3 * oneMinusT2 * t * p1.x + 3 * oneMinusT * t2 * p2.x + t3 * p3.x,
+            y: oneMinusT3 * p0.y + 3 * oneMinusT2 * t * p1.y + 3 * oneMinusT * t2 * p2.y + t3 * p3.y,
+            z: oneMinusT3 * p0.z + 3 * oneMinusT2 * t * p1.z + 3 * oneMinusT * t2 * p2.z + t3 * p3.z
+        };
+    }
+
+    // Update tension based on emotional state
+    updateTensionFromEmotion(emotionalState) {
+        switch (emotionalState) {
+            case 'anticipation':
+                this.tensionControl.position = 0.8;
+                this.tensionControl.color = 0.6;
+                break;
+            case 'excitement':
+                this.tensionControl.position = 1.2;
+                this.tensionControl.size = 1.0;
+                break;
+            case 'calm':
+                this.tensionControl.position = 0.3;
+                this.tensionControl.color = 0.2;
+                break;
+            case 'release':
+                this.tensionControl.position = 0.6;
+                this.tensionControl.energy = 0.8;
+                break;
+            case 'harmony':
+                this.tensionControl.position = 0.5;
+                this.tensionControl.color = 0.4;
+                this.tensionControl.size = 0.7;
+                this.tensionControl.energy = 0.5;
+                break;
+        }
+    }
+}
+
+// ENHANCED: Predictive Transition Preparation System
+class PredictiveTransitionPrep {
+    constructor() {
+        this.nextStagePreparation = {
+            effectsPreWarmed: false,
+            colorTransitionReady: false,
+            positionBuffersReady: false,
+            timingOptimized: false
+        };
+        
+        this.preparationThresholds = {
+            [ANIMATION_STATES.CONVERGING]: 0.65,    // Start earlier for smoother transition
+            [ANIMATION_STATES.X_BREATHING]: 0.80,   // Slightly earlier
+            [ANIMATION_STATES.ACTIVATION]: 0.70,    // Adjusted for better flow
+            [ANIMATION_STATES.MORPHING]: 0.75,      // Earlier preparation
+            [ANIMATION_STATES.DISSIPATING]: 0.85    // Earlier for graceful ending
+        };
+        
+        this.preWarmingIntensity = 0.0;
+        this.preparationStartTime = 0;
+    }
+
+    // Check if we should start preparing for next stage
+    shouldStartPreparation(currentState, stateProgress) {
+        const threshold = this.preparationThresholds[currentState] || 0.8;
+        return stateProgress >= threshold && !this.nextStagePreparation.effectsPreWarmed;
+    }
+
+    // Prepare effects for the next animation stage - ENHANCED with smooth intensity progression
+    preWarmNextStageEffects(currentState, nextState, stateProgress) {
+        if (!this.shouldStartPreparation(currentState, stateProgress)) {
+            return;
+        }
+
+        const threshold = this.preparationThresholds[currentState];
+        const rawProgress = (stateProgress - threshold) / (1 - threshold);
+        
+        // Enhanced smooth progression with minimum base intensity
+        const smoothProgress = this.smoothstepIntensity(Math.max(0, rawProgress));
+        const baseIntensity = 0.05; // Minimum base intensity to avoid zero
+        const enhancedIntensity = baseIntensity + smoothProgress * 0.25; // Maximum 0.3 total
+        
+        this.preWarmingIntensity = Math.min(enhancedIntensity, 0.3);
+
+        switch (nextState) {
+            case ANIMATION_STATES.X_BREATHING:
+                this.preWarmBreathing(smoothProgress, enhancedIntensity);
+                break;
+            case ANIMATION_STATES.ACTIVATION:
+                this.preWarmActivation(smoothProgress, enhancedIntensity);
+                break;
+            case ANIMATION_STATES.MORPHING:
+                this.preWarmMorphing(smoothProgress, enhancedIntensity);
+                break;
+            case ANIMATION_STATES.DISSIPATING:
+                this.preWarmDissipation(smoothProgress, enhancedIntensity);
+                break;
+        }
+
+        this.nextStagePreparation.effectsPreWarmed = true;
+    }
+
+    // Enhanced smoothstep function for natural intensity progression
+    smoothstepIntensity(t) {
+        // Classic smoothstep: 3t² - 2t³
+        return t * t * (3 - 2 * t);
+    }
+
+    // Pre-warm breathing effects - ENHANCED with smooth intensity progression
+    preWarmBreathing(smoothProgress, enhancedIntensity) {
+        // Enhanced breathing rhythm preparation with guaranteed minimum
+        const minIntensity = 0.02; // Minimum breathing preparation
+        const maxIntensity = 0.15; // Maximum breathing preparation
+        
+        this.breathingPreWarmIntensity = minIntensity + smoothProgress * (maxIntensity - minIntensity);
+        
+        // Log with more detail for debugging
+        console.log(`🫁 Pre-warming breathing effects - Progress: ${smoothProgress.toFixed(3)}, Intensity: ${this.breathingPreWarmIntensity.toFixed(3)}`);
+    }
+
+    // Pre-warm activation effects - ENHANCED
+    preWarmActivation(smoothProgress, enhancedIntensity) {
+        // Enhanced energy accumulation preparation
+        const minIntensity = 0.03;
+        const maxIntensity = 0.25;
+        
+        this.activationPreWarmIntensity = minIntensity + smoothProgress * (maxIntensity - minIntensity);
+        console.log(`⚡ Pre-warming activation effects - Progress: ${smoothProgress.toFixed(3)}, Intensity: ${this.activationPreWarmIntensity.toFixed(3)}`);
+    }
+
+    // Pre-warm morphing effects - ENHANCED
+    preWarmMorphing(smoothProgress, enhancedIntensity) {
+        // Enhanced morphing path calculation preparation
+        const minIntensity = 0.02;
+        const maxIntensity = 0.20;
+        
+        this.morphingPreWarmIntensity = minIntensity + smoothProgress * (maxIntensity - minIntensity);
+        console.log(`🔄 Pre-warming morphing effects - Progress: ${smoothProgress.toFixed(3)}, Intensity: ${this.morphingPreWarmIntensity.toFixed(3)}`);
+    }
+
+    // Pre-warm dissipation effects - ENHANCED
+    preWarmDissipation(smoothProgress, enhancedIntensity) {
+        // Enhanced dissipation energy preparation
+        const minIntensity = 0.04;
+        const maxIntensity = 0.30;
+        
+        this.dissipationPreWarmIntensity = minIntensity + smoothProgress * (maxIntensity - minIntensity);
+        console.log(`💨 Pre-warming dissipation effects - Progress: ${smoothProgress.toFixed(3)}, Intensity: ${this.dissipationPreWarmIntensity.toFixed(3)}`);
+    }
+
+    // Reset preparation state for new cycle
+    resetPreparation() {
+        this.nextStagePreparation = {
+            effectsPreWarmed: false,
+            colorTransitionReady: false,
+            positionBuffersReady: false,
+            timingOptimized: false
+        };
+        
+        this.preWarmingIntensity = 0.0;
+        this.breathingPreWarmIntensity = 0.0;
+        this.activationPreWarmIntensity = 0.0;
+        this.morphingPreWarmIntensity = 0.0;
+        this.dissipationPreWarmIntensity = 0.0;
+    }
+
+    // Get current pre-warming intensity for specific effect
+    getPreWarmIntensity(effectType) {
+        switch (effectType) {
+            case 'breathing': return this.breathingPreWarmIntensity || 0;
+            case 'activation': return this.activationPreWarmIntensity || 0;
+            case 'morphing': return this.morphingPreWarmIntensity || 0;
+            case 'dissipation': return this.dissipationPreWarmIntensity || 0;
+            default: return this.preWarmingIntensity;
+        }
+    }
+}
+
+// ENHANCED: Environmental Awareness System
+class EnvironmentalAwareness {
+    constructor() {
+        this.mouseState = {
+            position: { x: 0, y: 0 },
+            velocity: { x: 0, y: 0 },
+            acceleration: { x: 0, y: 0 },
+            lastUpdate: 0,
+            isActive: false,
+            activityLevel: 0
+        };
+        
+        this.windowState = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            aspectRatio: window.innerWidth / window.innerHeight,
+            size: 'medium'
+        };
+        
+        this.performanceState = {
+            frameRate: 60,
+            averageFrameTime: 16.67,
+            loadLevel: 'normal'
+        };
+        
+        this.environmentalInfluence = {
+            transitionSpeed: 1.0,
+            effectIntensity: 1.0,
+            detailLevel: 1.0,
+            responsiveness: 1.0
+        };
+        
+        this.lastFrameTime = performance.now();
+        this.frameTimeHistory = [];
+        this.maxFrameHistory = 30;
+    }
+
+    // Update mouse behavior analysis
+    updateMouseBehavior(mouseX, mouseY) {
+        const now = performance.now();
+        const deltaTime = now - this.mouseState.lastUpdate;
+        
+        if (deltaTime > 0) {
+            // Calculate velocity
+            const deltaX = mouseX - this.mouseState.position.x;
+            const deltaY = mouseY - this.mouseState.position.y;
+            
+            const newVelocityX = deltaX / deltaTime * 1000; // pixels per second
+            const newVelocityY = deltaY / deltaTime * 1000;
+            
+            // Calculate acceleration
+            const accelX = (newVelocityX - this.mouseState.velocity.x) / deltaTime * 1000;
+            const accelY = (newVelocityY - this.mouseState.velocity.y) / deltaTime * 1000;
+            
+            // Update mouse state
+            this.mouseState.position = { x: mouseX, y: mouseY };
+            this.mouseState.velocity = { x: newVelocityX, y: newVelocityY };
+            this.mouseState.acceleration = { x: accelX, y: accelY };
+            this.mouseState.lastUpdate = now;
+            
+            // Calculate activity level
+            const speed = Math.sqrt(newVelocityX * newVelocityX + newVelocityY * newVelocityY);
+            this.mouseState.activityLevel = Math.min(speed / 1000, 2.0); // Normalized activity
+            this.mouseState.isActive = speed > 50; // Active if moving faster than 50 px/s
+        }
+    }
+
+    // Update window state analysis
+    updateWindowState() {
+        this.windowState.width = window.innerWidth;
+        this.windowState.height = window.innerHeight;
+        this.windowState.aspectRatio = this.windowState.width / this.windowState.height;
+        
+        // Categorize window size
+        const area = this.windowState.width * this.windowState.height;
+        if (area < 500000) { // < 500k pixels
+            this.windowState.size = 'small';
+        } else if (area < 1500000) { // < 1.5M pixels
+            this.windowState.size = 'medium';
+        } else {
+            this.windowState.size = 'large';
+        }
+    }
+
+    // Update performance analysis
+    updatePerformanceState() {
+        const now = performance.now();
+        const frameTime = now - this.lastFrameTime;
+        
+        this.frameTimeHistory.push(frameTime);
+        if (this.frameTimeHistory.length > this.maxFrameHistory) {
+            this.frameTimeHistory.shift();
+        }
+        
+        // Calculate average frame time
+        const sum = this.frameTimeHistory.reduce((a, b) => a + b, 0);
+        this.performanceState.averageFrameTime = sum / this.frameTimeHistory.length;
+        this.performanceState.frameRate = 1000 / this.performanceState.averageFrameTime;
+        
+        // Determine load level
+        if (this.performanceState.frameRate > 55) {
+            this.performanceState.loadLevel = 'light';
+        } else if (this.performanceState.frameRate > 40) {
+            this.performanceState.loadLevel = 'normal';
+        } else if (this.performanceState.frameRate > 25) {
+            this.performanceState.loadLevel = 'heavy';
+        } else {
+            this.performanceState.loadLevel = 'critical';
+        }
+        
+        this.lastFrameTime = now;
+    }
+
+    // Calculate adaptive response intensity
+    calculateAdaptiveResponseIntensity() {
+        // Mouse activity influence
+        const mouseInfluence = Math.min(this.mouseState.activityLevel, 1.0);
+        
+        // Window size influence
+        const sizeInfluence = this.windowState.size === 'large' ? 1.2 : 
+                             this.windowState.size === 'small' ? 0.8 : 1.0;
+        
+        // Performance influence
+        const perfInfluence = this.performanceState.loadLevel === 'light' ? 1.1 :
+                             this.performanceState.loadLevel === 'heavy' ? 0.7 :
+                             this.performanceState.loadLevel === 'critical' ? 0.5 : 1.0;
+        
+        // Update environmental influence
+        this.environmentalInfluence.transitionSpeed = perfInfluence * (1 + mouseInfluence * 0.2);
+        this.environmentalInfluence.effectIntensity = sizeInfluence * perfInfluence * (1 + mouseInfluence * 0.3);
+        this.environmentalInfluence.detailLevel = perfInfluence;
+        this.environmentalInfluence.responsiveness = mouseInfluence * perfInfluence;
+        
+        return this.environmentalInfluence;
+    }
+
+    // Get environmental motion modifier
+    getEnvironmentalMotionModifier(particleIndex) {
+        const baseModifier = {
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+            damping: 1.0
+        };
+        
+        // Mouse proximity influence
+        if (this.mouseState.isActive) {
+            const mouseProximity = this.calculateMouseProximityInfluence(particleIndex);
+            baseModifier.amplitude *= (1 + mouseProximity * 0.3);
+            baseModifier.frequency *= (1 + mouseProximity * 0.2);
+            baseModifier.phase += mouseProximity * Math.PI * 0.5;
+        }
+        
+        // Window aspect ratio influence
+        if (this.windowState.aspectRatio > 2.0 || this.windowState.aspectRatio < 0.5) {
+            // Extreme aspect ratios
+            baseModifier.amplitude *= 0.8;
+            baseModifier.frequency *= 1.2;
+        }
+        
+        // Performance-based damping
+        if (this.performanceState.loadLevel === 'heavy' || this.performanceState.loadLevel === 'critical') {
+            baseModifier.damping *= 0.7; // Reduce motion complexity
+        }
+        
+        return baseModifier;
+    }
+
+    // Calculate mouse proximity influence for a particle
+    calculateMouseProximityInfluence(particleIndex) {
+        // This is a simplified calculation - in actual implementation,
+        // you'd need access to particle positions
+        const normalizedIndex = particleIndex / 1000; // Assume ~1000 particles
+        const proximityFactor = Math.abs(this.mouseState.position.x / window.innerWidth - normalizedIndex);
+        return Math.max(0, 1 - proximityFactor * 2); // 0 to 1 influence
+    }
+
+    // Get current environmental state summary
+    getEnvironmentalState() {
+        return {
+            mouse: this.mouseState,
+            window: this.windowState,
+            performance: this.performanceState,
+            influence: this.environmentalInfluence
+        };
+    }
+}
 
 // Simplified organic curve generation - replaced by elegant spiral convergence path
 
@@ -272,14 +1227,13 @@ class ParticleAnimation {
         this.particleSpringConstants = []; // Individual spring constants
         this.particleOrganicSeeds = []; // Multiple seeds for different organic behaviors
         
-        // Epic Enhancement: Advanced Energy Trail System
+        // Epic Enhancement: Energy Trail System
         this.particleTrails = [];      // Trail history for each particle
-        this.particleVelocities = [];  // Velocity history for smooth trails
-        this.trailLength = 25;         // Increased trail length for smoother effect
-        this.trailFadeSpeed = 0.92;    // Slower fade for longer trails
+        this.trailLength = 15;         // Number of trail points per particle
+        this.trailFadeSpeed = 0.95;    // Trail alpha decay rate
         this.enableTrails = false;     // Trail system toggle
-        this.trailSmoothing = 0.8;     // Smoothing factor for trail interpolation
-        this.velocityInfluence = 0.3;  // How much velocity affects trail length
+        this.trailIntensity = 0.0;     // Trail intensity for smooth transitions
+        this.trailPrewarm = false;     // Pre-warming trails for smooth activation
         
         // Epic Enhancement: Cinematic Camera System  
         this.cameraShake = { intensity: 0, duration: 0, time: 0 };
@@ -304,6 +1258,35 @@ class ParticleAnimation {
             masterGain: null
         };
         // this.initializeAudioSystem(); // Audio system disabled
+        
+        // ENHANCED: Advanced Transition Enhancement Systems
+        this.emotionalEngine = new EmotionalTransitionEngine();
+        this.rhythmController = new IntelligentRhythmController();
+        this.multiInterpolator = new MultiDimensionalInterpolator();
+        this.predictivePrep = new PredictiveTransitionPrep();
+        this.environmentalAwareness = new EnvironmentalAwareness();
+        
+        // Enhanced transition coordination
+        this.transitionCoordinator = {
+            lastStateTransition: 0,
+            smoothnessLevel: 'ultra', // 'basic', 'smooth', 'ultra'
+            adaptiveTimingEnabled: true,
+            emotionalResponseEnabled: true,
+            predictivePreparationEnabled: true,
+            environmentalAdaptationEnabled: true,
+            debugMode: false
+        };
+        
+        // Advanced particle energy tracking for enhanced transitions
+        this.particleEnergyState = {
+            averageEnergy: 0,
+            energyDistribution: 0,
+            harmonicBalance: 0,
+            convergenceRate: 0,
+            lastUpdate: 0
+        };
+        
+        console.log('🎨 Advanced Transition Enhancement System initialized with emotional intelligence!');
         
         this.init();
     }
@@ -337,11 +1320,16 @@ class ParticleAnimation {
         this.renderer.setClearColor(0x000000);
         document.getElementById('canvasContainer').appendChild(this.renderer.domElement);
         
-        // 处理窗口大小调整
+        // ENHANCED: 处理窗口大小调整 with environmental awareness
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Update environmental awareness with new window state
+            if (this.transitionCoordinator.environmentalAdaptationEnabled) {
+                this.environmentalAwareness.updateWindowState();
+            }
         });
     }
     
@@ -467,15 +1455,14 @@ class ParticleAnimation {
             this.particleSeeds.push(Math.random());
             this.particlePhases.push(Math.random() * Math.PI * 2);
             
-            // Initialize advanced trail system
+            // Initialize epic trail system
             this.particleTrails.push([]);
-            this.particleVelocities.push(0);
         }
     }
     
-    // Epic Enhancement: Advanced Energy Trail System with Smoothing
+    // Epic Enhancement: Update Energy Trail System
     updateEnergyTrails() {
-        if (!this.enableTrails || !this.particles) return;
+        if ((!this.enableTrails && !this.trailPrewarm) || !this.particles) return;
         
         const positions = this.particles.geometry.attributes.position.array;
         
@@ -488,55 +1475,19 @@ class ParticleAnimation {
                 time: this.globalTime
             };
             
-            // Calculate velocity for dynamic trail length
-            let velocity = 0;
-            if (this.particleTrails[i].length > 0) {
-                const lastPos = this.particleTrails[i][0];
-                const dx = currentPos.x - lastPos.x;
-                const dy = currentPos.y - lastPos.y;
-                const dz = currentPos.z - lastPos.z;
-                velocity = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            // Add current position to trail
+            this.particleTrails[i].unshift(currentPos);
+            
+            // Limit trail length
+            if (this.particleTrails[i].length > this.trailLength) {
+                this.particleTrails[i].pop();
             }
             
-            // Store velocity for smooth interpolation
-            this.particleVelocities[i] = velocity;
-            
-            // Dynamic trail length based on velocity
-            const dynamicTrailLength = Math.max(15, Math.min(this.trailLength, 
-                15 + Math.floor(velocity * this.velocityInfluence * 20)));
-            
-            // Add current position to trail with smoothing
-            if (this.particleTrails[i].length > 0) {
-                const lastPos = this.particleTrails[i][0];
-                const smoothedPos = {
-                    x: lastPos.x + (currentPos.x - lastPos.x) * this.trailSmoothing,
-                    y: lastPos.y + (currentPos.y - lastPos.y) * this.trailSmoothing,
-                    z: lastPos.z + (currentPos.z - lastPos.z) * this.trailSmoothing,
-                    time: this.globalTime,
-                    velocity: velocity
-                };
-                this.particleTrails[i].unshift(smoothedPos);
-            } else {
-                currentPos.velocity = velocity;
-                this.particleTrails[i].unshift(currentPos);
-            }
-            
-            // Limit trail length dynamically
-            if (this.particleTrails[i].length > dynamicTrailLength) {
-                this.particleTrails[i].splice(dynamicTrailLength);
-            }
-            
-            // Update trail alpha values with enhanced fade
+            // Update trail alpha values
             for (let j = 0; j < this.particleTrails[i].length; j++) {
                 const trailPoint = this.particleTrails[i][j];
-                const normalizedAge = j / this.particleTrails[i].length;
-                const alpha = Math.pow(this.trailFadeSpeed, j) * (1 - normalizedAge * 0.3);
+                const alpha = Math.pow(this.trailFadeSpeed, j);
                 trailPoint.alpha = alpha;
-            }
-            
-            // Apply advanced smoothing to trail positions
-            if (this.particleTrails[i].length > 3) {
-                this.smoothTrailPositions(i);
             }
         }
     }
@@ -635,7 +1586,7 @@ class ParticleAnimation {
                 // Much more subtle opacity
                 ray.material.opacity = this.godRays.intensity * 0.08; // Reduced from 0.3 to 0.08
                 ray.rotation.z = (index / this.godRayMeshes.length) * Math.PI * 2 + this.godRays.angle;
-                
+            
                 // More subtle colors - softer tones
                 const rayColor = index % 2 === 0 ? 
                     new THREE.Color(0.8, 0.5, 0.2) :  // Softer orange
@@ -647,21 +1598,29 @@ class ParticleAnimation {
         });
     }
 
-    // Epic Enhancement: Advanced Trail Visual Effects with Elegant Colors
+        // Epic Enhancement: Update Trail Visual Effects (ENHANCED)
     updateTrailVisuals() {
-        if (!this.enableTrails || !this.trailMeshes) return;
+        const shouldShowTrails = (this.enableTrails || this.trailPrewarm) && this.trailIntensity > 0.01;
+        if (!shouldShowTrails || !this.trailMeshes) return;
         
         for (let i = 0; i < this.particleCount && i < this.trailMeshes.length; i++) {
             const trail = this.particleTrails[i];
             const trailMesh = this.trailMeshes[i];
             
-            if (trail.length > 1) {
+            if (trail.length > 1 && this.trailIntensity > 0.01) {
                 trailMesh.visible = true;
                 
                 const positions = trailMesh.geometry.attributes.position.array;
                 const colors = trailMesh.geometry.attributes.color.array;
                 
-                // Update trail positions and enhanced colors
+                // Calculate target position for consistent color calculation
+                const targetPos = {
+                    x: this.positions1[i * 3],
+                    y: this.positions1[i * 3 + 1],
+                    z: this.positions1[i * 3 + 2]
+                };
+                
+                // Update trail positions and colors
                 for (let j = 0; j < this.trailLength; j++) {
                     if (j < trail.length) {
                         const point = trail[j];
@@ -669,35 +1628,19 @@ class ParticleAnimation {
                         positions[j * 3 + 1] = point.y;
                         positions[j * 3 + 2] = point.z;
                         
-                        // Enhanced color system with HSL interpolation
-                        const distance = Math.sqrt(point.x * point.x + point.y * point.y);
-                        const gradientT = Math.min(distance / 4, 1);
-                        const alpha = point.alpha || (1 - j / this.trailLength);
+                        // Use the same gradient color calculation as particles
+                        const baseColor = this.calculateXShapeGradientColor(1.0, i, targetPos);
                         
-                        // Dynamic color based on trail age and velocity
-                        const trailAge = j / trail.length;
-                        const velocityFactor = point.velocity ? Math.min(point.velocity * 0.5, 1) : 0;
+                        // Calculate trail fade based on position in trail
+                        const trailAlpha = point.alpha || (1 - j / this.trailLength);
                         
-                        // Create smooth color transition
-                        const baseHue = 220; // Blue base
-                        const targetHue = 30;  // Orange target
-                        const hue = baseHue + (targetHue - baseHue) * gradientT;
+                        // Apply trail intensity for smooth transitions
+                        const finalAlpha = trailAlpha * this.trailIntensity;
                         
-                        // Add velocity-based color variation
-                        const hueVariation = velocityFactor * 20 * Math.sin(trailAge * Math.PI);
-                        const finalHue = (hue + hueVariation) % 360;
-                        
-                        // Enhanced saturation and lightness
-                        const saturation = 0.8 + velocityFactor * 0.2;
-                        const lightness = 0.4 + trailAge * 0.3 + velocityFactor * 0.2;
-                        
-                        // Convert HSL to RGB with enhanced alpha
-                        const enhancedAlpha = alpha * (1 + velocityFactor * 0.3);
-                        const rgb = this.hslToRgb(finalHue / 360, saturation, lightness);
-                        
-                        colors[j * 3] = rgb.r * enhancedAlpha;     // Red
-                        colors[j * 3 + 1] = rgb.g * enhancedAlpha; // Green  
-                        colors[j * 3 + 2] = rgb.b * enhancedAlpha; // Blue
+                        // Slightly enhance colors for trail visibility
+                        colors[j * 3] = baseColor.r * (0.8 + finalAlpha * 0.4);     
+                        colors[j * 3 + 1] = baseColor.g * (0.8 + finalAlpha * 0.4); 
+                        colors[j * 3 + 2] = baseColor.b * (0.8 + finalAlpha * 0.4); 
                     } else {
                         // Empty positions for unused trail points
                         positions[j * 3] = 0;
@@ -716,50 +1659,6 @@ class ParticleAnimation {
                 trailMesh.visible = false;
             }
         }
-    }
-
-    // Epic Enhancement: Advanced Trail Smoothing with Catmull-Rom Interpolation
-    smoothTrailPositions(particleIndex) {
-        const trail = this.particleTrails[particleIndex];
-        if (trail.length < 4) return;
-        
-        // Apply Catmull-Rom smoothing to trail positions
-        for (let i = 1; i < trail.length - 2; i++) {
-            const p0 = trail[i - 1];
-            const p1 = trail[i];
-            const p2 = trail[i + 1];
-            const p3 = trail[i + 2];
-            
-            // Catmull-Rom interpolation parameters
-            const t = 0.5; // Smoothing factor
-            
-            // Calculate smoothed position
-            const smoothedX = this.catmullRomInterpolate(p0.x, p1.x, p2.x, p3.x, t);
-            const smoothedY = this.catmullRomInterpolate(p0.y, p1.y, p2.y, p3.y, t);
-            const smoothedZ = this.catmullRomInterpolate(p0.z, p1.z, p2.z, p3.z, t);
-            
-            // Apply smoothing with velocity consideration
-            const velocity = trail[i].velocity || 0;
-            const smoothingFactor = Math.min(0.3, velocity * 0.1);
-            
-            trail[i].x += (smoothedX - trail[i].x) * smoothingFactor;
-            trail[i].y += (smoothedY - trail[i].y) * smoothingFactor;
-            trail[i].z += (smoothedZ - trail[i].z) * smoothingFactor;
-        }
-    }
-
-    // Catmull-Rom spline interpolation
-    catmullRomInterpolate(p0, p1, p2, p3, t) {
-        const t2 = t * t;
-        const t3 = t2 * t;
-        
-        // Catmull-Rom matrix coefficients
-        const c0 = -0.5 * t3 + t2 - 0.5 * t;
-        const c1 = 1.5 * t3 - 2.5 * t2 + 1;
-        const c2 = -1.5 * t3 + 2 * t2 + 0.5 * t;
-        const c3 = 0.5 * t3 - 0.5 * t2;
-        
-        return c0 * p0 + c1 * p1 + c2 * p2 + c3 * p3;
     }
 
     // Epic Enhancement: Setup Mouse Interaction
@@ -837,15 +1736,15 @@ class ParticleAnimation {
     updateAmbientTones(frequency, energy) {
         // Audio system completely disabled
         return;
-    }
+        }
 
     // Epic Enhancement: Stop Procedural Audio (DISABLED)
     stopProceduralAudio() {
         // Audio system completely disabled
         return;
     }
-      
-     // Fluid dynamics helper methods
+    
+    // Fluid dynamics helper methods
     updateParticleNeighbors() {
         const neighborRadius = 0.5;
         const maxNeighbors = 8;
@@ -1140,11 +2039,11 @@ class ParticleAnimation {
                 // === 使用JavaScript计算的渐变颜色 ===
                 // 直接使用从vertex shader传递的颜色
                 vec3 baseColor = vColor;
-                
+
                 // 添加轻微的时间变化增强视觉效果
                 float timeEnhancement = sin(time * 0.3 + vPosition.x * 1.5) * 0.08 + 1.0;
                 baseColor *= timeEnhancement;
-                
+
                 // 轻微的速度颜色效果
                 float velocityInfluence = length(vVelocity) * 0.2;
                 if (velocityInfluence > 0.2) {
@@ -1294,19 +2193,46 @@ class ParticleAnimation {
         }
     }
     
-    // Stage 1: Ultra-Elegant Particle Convergence to X Shape
+    // Stage 1: Ultra-Elegant Particle Convergence to X Shape - ENHANCED WITH EMOTIONAL INTELLIGENCE
     updateConvergingState() {
-        const duration = STAGE_DURATIONS.CONVERGING;
+        // ENHANCED: Calculate adaptive duration based on convergence analysis
+        const baseDuration = STAGE_DURATIONS.CONVERGING;
+        let adaptiveDuration = baseDuration;
+        
+        if (this.transitionCoordinator.adaptiveTimingEnabled) {
+            const targetPositions = this.positions1;
+            const currentPositions = this.particles.geometry.attributes.position.array;
+            this.rhythmController.analyzeConvergenceState(currentPositions, targetPositions, this.currentState);
+            const timingMultiplier = this.rhythmController.calculateAdaptiveDuration(this.currentState, this.stateProgress);
+            adaptiveDuration = baseDuration * timingMultiplier;
+        }
+        
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
-        this.stateProgress = Math.min(phaseTime / duration, 1);
+        this.stateProgress = Math.min(phaseTime / adaptiveDuration, 1);
+
+        // ENHANCED: Update emotional state and environmental awareness
+        if (this.transitionCoordinator.emotionalResponseEnabled) {
+            this.updateParticleEnergyState();
+            this.emotionalEngine.calculateEmotionalIntensity(
+                this.currentState, 
+                this.stateProgress, 
+                this.particleEnergyState.averageEnergy
+            );
+        }
+        
+        if (this.transitionCoordinator.environmentalAdaptationEnabled) {
+            this.environmentalAwareness.updatePerformanceState();
+            this.environmentalAwareness.calculateAdaptiveResponseIntensity();
+        }
 
         const positions = this.particles.geometry.attributes.position.array;
         const colors = this.particles.geometry.attributes.color.array;
         const sizes = this.particles.geometry.attributes.size.array;
 
-        // Create unified wave pattern for harmonious convergence
-        const waveSpeed = 3.0;
-        const wavePhase = this.stateProgress * waveSpeed;
+        // ENHANCED: Adaptive wave pattern based on emotional state and environment
+        const environmentalInfluence = this.environmentalAwareness.environmentalInfluence;
+        const baseWaveSpeed = 3.0 * environmentalInfluence.transitionSpeed;
+        const wavePhase = this.stateProgress * baseWaveSpeed;
 
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
@@ -1326,31 +2252,76 @@ class ParticleAnimation {
             // Calculate particle's distance from center for wave-based timing
             const centerDistance = Math.sqrt(start.x * start.x + start.y * start.y);
             const normalizedDistance = Math.min(centerDistance / 8, 1);
-            
-            // Unified wave-based delay instead of random individual delays
-            const waveDelay = normalizedDistance * 0.3;
-            const waveProgress = Math.max(0, Math.min(1, (this.stateProgress - waveDelay) / (1 - waveDelay * 0.8)));
-            
-            // Elegant sigmoid-based easing for natural acceleration/deceleration
-            const smoothProgress = this.elegantSigmoidEasing(waveProgress);
 
-            // Create spiral convergence path using polar coordinates
-            const spiralPath = this.calculateSpiralConvergencePath(start, target, smoothProgress, i);
+            // ENHANCED: Adaptive wave delay based on environmental awareness
+            const baseWaveDelay = normalizedDistance * 0.3;
+            const environmentalModifier = this.environmentalAwareness.getEnvironmentalMotionModifier(i);
+            const adaptiveWaveDelay = baseWaveDelay * environmentalModifier.damping;
+            
+            const waveProgress = Math.max(0, Math.min(1, (this.stateProgress - adaptiveWaveDelay) / (1 - adaptiveWaveDelay * 0.8)));
+            
+            // ENHANCED: Emotional easing for expressive movement
+            let smoothProgress;
+            if (this.transitionCoordinator.emotionalResponseEnabled) {
+                // Use emotional engine to modulate the easing
+                const baseEasing = this.elegantSigmoidEasing;
+                smoothProgress = this.emotionalEngine.modulateEasingWithEmotion(baseEasing, waveProgress, i);
+                
+                // Update interpolator tension based on current emotional state
+                this.multiInterpolator.updateTensionFromEmotion(this.emotionalEngine.currentDominantEmotion);
+            } else {
+                smoothProgress = this.elegantSigmoidEasing(waveProgress);
+            }
+
+            // ENHANCED: Advanced multi-dimensional interpolation for position, color, and size
+            let spiralPath, finalColor, sizeEvolution;
+            
+            if (this.transitionCoordinator.smoothnessLevel === 'ultra' && this.multiInterpolator) {
+                // Use advanced multi-dimensional interpolation
+                const interpolationResult = this.multiInterpolator.interpolateMultiDimensional(
+                    { position: start, color: null, size: 0.2, energy: 0 },
+                    { position: target, color: null, size: 1.0, energy: 1.0 },
+                    smoothProgress,
+                    ['position', 'size', 'energy'],
+                    i
+                );
+                
+                spiralPath = interpolationResult.position;
+                sizeEvolution = interpolationResult.size;
+                
+                // Enhanced color calculation with emotional modulation
+                const baseGradientColor = this.calculateXShapeGradientColor(smoothProgress, i, target);
+                if (this.transitionCoordinator.emotionalResponseEnabled) {
+                    const emotionalModulation = this.emotionalEngine.getEmotionalColorModulation();
+                    finalColor = {
+                        r: baseGradientColor.r * emotionalModulation.r,
+                        g: baseGradientColor.g * emotionalModulation.g,
+                        b: baseGradientColor.b * emotionalModulation.b
+                    };
+                } else {
+                    finalColor = baseGradientColor;
+                }
+                
+            } else {
+                // Fallback to original spiral path calculation
+                spiralPath = this.calculateSpiralConvergencePath(start, target, smoothProgress, i);
+                finalColor = this.calculateXShapeGradientColor(smoothProgress, i, target);
+                sizeEvolution = this.calculateElegantSizeEvolution(smoothProgress);
+            }
 
             // Apply the calculated position
             positions[index] = spiralPath.x;
             positions[index + 1] = spiralPath.y;
             positions[index + 2] = spiralPath.z;
 
-            // Beautiful blue-to-orange gradient based on target X position
-            const gradientColor = this.calculateXShapeGradientColor(smoothProgress, i, target);
-            colors[index] = gradientColor.r;
-            colors[index + 1] = gradientColor.g;
-            colors[index + 2] = gradientColor.b;
+            // Apply enhanced colors
+            colors[index] = finalColor.r;
+            colors[index + 1] = finalColor.g;
+            colors[index + 2] = finalColor.b;
 
-            // Elegant size evolution with natural growth curve
-            const sizeEvolution = this.calculateElegantSizeEvolution(smoothProgress);
-            sizes[i] = this.particleSizes[i] * sizeEvolution;
+            // Apply enhanced size with environmental scaling
+            const environmentalScale = this.environmentalAwareness.environmentalInfluence.effectIntensity;
+            sizes[i] = this.particleSizes[i] * sizeEvolution * environmentalScale;
         }
 
         // Update geometry
@@ -1358,10 +2329,28 @@ class ParticleAnimation {
         this.particles.geometry.attributes.color.needsUpdate = true;
         this.particles.geometry.attributes.size.needsUpdate = true;
 
+        // ENHANCED: Predictive transition preparation for next stage
+        if (this.transitionCoordinator.predictivePreparationEnabled) {
+            this.predictivePrep.preWarmNextStageEffects(
+                this.currentState, 
+                ANIMATION_STATES.X_BREATHING, 
+                this.stateProgress
+            );
+        }
+
         // Perfect completion detection with energy stabilization phase
         if (this.stateProgress >= 1.0) {
             if (this.currentState === ANIMATION_STATES.CONVERGING) {
-                console.log('Ultra-elegant convergence complete with perfect harmony');
+                const emotionalState = this.emotionalEngine.currentDominantEmotion;
+                const preWarmIntensity = this.predictivePrep.getPreWarmIntensity('breathing');
+                const convergenceRate = this.particleEnergyState.convergenceRate;
+                
+                console.log(`🎯 Ultra-elegant convergence complete with perfect harmony!`);
+                console.log(`   └─ Emotional state: ${emotionalState}`);
+                console.log(`   └─ Pre-warm intensity: ${preWarmIntensity.toFixed(3)}`);
+                console.log(`   └─ Convergence rate: ${convergenceRate.toFixed(3)}`);
+                console.log(`🔄 Initiating seamless transition to breathing phase...`);
+                
                 this.transitionToState(ANIMATION_STATES.X_BREATHING);
             }
         }
@@ -1493,24 +2482,126 @@ class ParticleAnimation {
         };
     }
 
-    // Stage 2: Seamless Elegant Particle Breathing - Living X Shape
+    // ENHANCED: Update particle energy state for intelligent transitions
+    updateParticleEnergyState() {
+        if (!this.particles) return;
+        
+        const positions = this.particles.geometry.attributes.position.array;
+        const particleCount = this.particleCount;
+        
+        let totalEnergy = 0;
+        let energyVariance = 0;
+        let harmonicSum = 0;
+        let convergenceSum = 0;
+        
+        // Calculate various energy metrics
+        for (let i = 0; i < particleCount; i++) {
+            const index = i * 3;
+            const x = positions[index];
+            const y = positions[index + 1];
+            const z = positions[index + 2];
+            
+            // Energy based on distance from center
+            const energy = x * x + y * y + z * z;
+            totalEnergy += energy;
+            
+            // Variance for distribution analysis
+            energyVariance += energy * energy;
+            
+            // Harmonic analysis for rhythm detection
+            const angle = Math.atan2(y, x);
+            harmonicSum += Math.sin(angle * 4) + Math.cos(angle * 6);
+            
+            // Convergence rate (if target positions exist)
+            if (this.positions1.length > 0) {
+                const targetX = this.positions1[index];
+                const targetY = this.positions1[index + 1];
+                const targetZ = this.positions1[index + 2];
+                const distance = Math.sqrt(
+                    (x - targetX) * (x - targetX) + 
+                    (y - targetY) * (y - targetY) + 
+                    (z - targetZ) * (z - targetZ)
+                );
+                convergenceSum += distance;
+            }
+        }
+        
+        // Update energy state
+        this.particleEnergyState.averageEnergy = totalEnergy / particleCount;
+        this.particleEnergyState.energyDistribution = energyVariance / particleCount;
+        this.particleEnergyState.harmonicBalance = harmonicSum / particleCount;
+        this.particleEnergyState.convergenceRate = 1 - (convergenceSum / (particleCount * 10));
+        this.particleEnergyState.lastUpdate = performance.now();
+    }
+
+    // Stage 2: Seamless Elegant Particle Breathing - Living X Shape - ENHANCED WITH INTELLIGENT RHYTHM
     updateBreathingState() {
-        const duration = STAGE_DURATIONS.X_BREATHING;
+        // ENHANCED: Log breathing phase initiation with pre-warm status (only once)
+        if (this.stateProgress === 0 && !this.breathingInitLogged) {
+            const preWarmIntensity = this.predictivePrep.getPreWarmIntensity('breathing');
+            console.log(`🫁 Breathing phase initiated with pre-warm intensity: ${preWarmIntensity.toFixed(3)}`);
+            this.breathingInitLogged = true;
+        }
+        
+        // ENHANCED: Adaptive duration and rhythm control
+        const baseDuration = STAGE_DURATIONS.X_BREATHING;
+        let adaptiveDuration = baseDuration;
+        
+        if (this.transitionCoordinator.adaptiveTimingEnabled) {
+            const timingMultiplier = this.rhythmController.calculateAdaptiveDuration(this.currentState, this.stateProgress);
+            adaptiveDuration = baseDuration * timingMultiplier;
+        }
+        
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
-        this.stateProgress = Math.min(phaseTime / duration, 1);
+        this.stateProgress = Math.min(phaseTime / adaptiveDuration, 1);
+        
+        // ENHANCED: Update emotional and environmental state
+        if (this.transitionCoordinator.emotionalResponseEnabled) {
+            this.updateParticleEnergyState();
+            this.emotionalEngine.calculateEmotionalIntensity(
+                this.currentState, 
+                this.stateProgress, 
+                this.particleEnergyState.averageEnergy
+            );
+        }
         
         const positions = this.particles.geometry.attributes.position.array;
         const sizes = this.particles.geometry.attributes.size.array;
         const colors = this.particles.geometry.attributes.color.array;
         
-        // Three-phase breathing for seamless transition
-        const correctionPhase = 0.15;  // Position correction (0-15%)
-        const blendPhase = 0.25;       // Breathing blend-in (15-25%)
-        const breathingPhase = 1.0;    // Full breathing (25-100%)
+        // ENHANCED: Receive and apply pre-warming from previous stage for seamless transition
+        const preWarmIntensity = this.predictivePrep.getPreWarmIntensity('breathing');
+        const hasPreWarm = preWarmIntensity > 0.01;
         
-        // Elegant breathing parameters
-        const breathingFreq = 0.002; // Slower, more meditative breathing
-        const breathingTime = this.globalTime * breathingFreq;
+        // Enhanced three-phase breathing with pre-warm integration
+        const correctionPhase = hasPreWarm ? 0.08 : 0.15;  // Shorter correction if pre-warmed
+        const blendPhase = hasPreWarm ? 0.18 : 0.25;       // Faster blend-in if pre-warmed
+        const breathingPhase = 1.0;                        // Full breathing (18-100% or 25-100%)
+        
+        // ENHANCED: Intelligent breathing rhythm with pre-warm boost
+        let breathingParams;
+        if (this.transitionCoordinator.emotionalResponseEnabled) {
+            breathingParams = this.rhythmController.getBreathingRhythm(
+                this.globalTime, 
+                this.emotionalEngine.currentDominantEmotion
+            );
+        } else {
+            // Fallback to original breathing parameters
+            breathingParams = {
+                frequency: 0.002,
+                amplitude: 0.05,
+                phase: this.globalTime * 0.002
+            };
+        }
+        
+        // Apply pre-warm boost to breathing parameters for smoother transition
+        if (hasPreWarm) {
+            breathingParams.amplitude *= (1 + preWarmIntensity * 2); // Boost amplitude
+            breathingParams.frequency *= (1 + preWarmIntensity * 0.5); // Slightly boost frequency
+            console.log(`🌊 Applying pre-warm boost to breathing - Amplitude boost: ${(preWarmIntensity * 2).toFixed(3)}`);
+        }
+        
+        const breathingTime = breathingParams.phase;
         
         for (let i = 0; i < this.particleCount; i++) {
             const index = i * 3;
@@ -1540,12 +2631,12 @@ class ParticleAnimation {
                 // Phase 2: Breathing animation blend-in
                 const blendProgress = (this.stateProgress - correctionPhase) / (blendPhase - correctionPhase);
                 const breathingBlend = this.elegantSigmoidEasing(blendProgress);
-                
+            
                 // Calculate breathing parameters
                 const centerDistance = Math.sqrt(targetX * targetX + targetY * targetY);
                 const normalizedDistance = Math.min(centerDistance / 4, 1);
                 const angle = Math.atan2(targetY, targetX);
-                
+            
                 // Gentle breathing wave
                 const breathingWave = Math.sin(breathingTime + normalizedDistance * 0.5);
                 const breathingIntensity = 0.05 * breathingBlend; // Gradual breathing introduction
@@ -1586,16 +2677,33 @@ class ParticleAnimation {
             positions[index + 1] = finalY;
             positions[index + 2] = finalZ;
             
-            // Synchronized size breathing
+            // ENHANCED: Intelligent synchronized breathing with emotional modulation
             const breathingWave = Math.sin(breathingTime + Math.sqrt(targetX * targetX + targetY * targetY) / 8);
             const sizeBlend = this.stateProgress > blendPhase ? 1.0 : Math.max(0, (this.stateProgress - correctionPhase) / (blendPhase - correctionPhase));
-            const sizePulse = Math.abs(breathingWave) * 0.02 * sizeBlend;
-            sizes[i] = this.particleSizes[i] + sizePulse;
             
-            // Beautiful gradient breathing with blue-to-orange colors
-            const colorPulse = Math.abs(breathingWave) * 0.08 * sizeBlend;
+            // Apply adaptive breathing amplitude
+            const adaptiveAmplitude = breathingParams.amplitude * (1 + this.particleEnergyState.harmonicBalance * 0.2);
+            const sizePulse = Math.abs(breathingWave) * adaptiveAmplitude * sizeBlend;
+            
+            // Environmental scaling for responsive breathing
+            const environmentalScale = this.environmentalAwareness.environmentalInfluence.effectIntensity;
+            sizes[i] = this.particleSizes[i] + sizePulse * environmentalScale;
+            
+            // ENHANCED: Emotional color breathing with sophisticated modulation
+            const colorPulse = Math.abs(breathingWave) * adaptiveAmplitude * 2 * sizeBlend;
             const targetPos = { x: targetX, y: targetY, z: targetZ };
-            const baseColor = this.calculateXShapeGradientColor(1.0, i, targetPos); // Full energy for settled state
+            let baseColor = this.calculateXShapeGradientColor(1.0, i, targetPos); // Full energy for settled state
+            
+            // Apply emotional color modulation
+            if (this.transitionCoordinator.emotionalResponseEnabled) {
+                const emotionalModulation = this.emotionalEngine.getEmotionalColorModulation();
+                baseColor = {
+                    r: baseColor.r * emotionalModulation.r,
+                    g: baseColor.g * emotionalModulation.g,
+                    b: baseColor.b * emotionalModulation.b
+                };
+            }
+            
             colors[index] = Math.min(1.0, baseColor.r + colorPulse);
             colors[index + 1] = Math.min(1.0, baseColor.g + colorPulse * 0.7);
             colors[index + 2] = Math.min(1.0, baseColor.b + colorPulse * 0.5);
@@ -1605,10 +2713,39 @@ class ParticleAnimation {
         this.particles.geometry.attributes.size.needsUpdate = true;
         this.particles.geometry.attributes.color.needsUpdate = true;
         
-        // Perfect completion transition
+        // ENHANCED: Enhanced trail pre-warming with predictive preparation
+        if (this.stateProgress >= 0.75 && !this.trailPrewarm) {
+            this.trailPrewarm = true;
+            this.trailIntensity = 0.0;
+            console.log('🎯 Pre-warming trail system for smooth activation');
+        }
+        
+        // Update trail pre-warming intensity with emotional modulation and breathing preparation
+        if (this.trailPrewarm) {
+            const baseIntensity = Math.min((this.stateProgress - 0.75) / 0.25, 0.3);
+            const emotionalBoost = this.transitionCoordinator.emotionalResponseEnabled ? 
+                this.emotionalEngine.emotionalStates.anticipation.intensity * 0.1 : 0;
+            
+            // Add breathing preparation influence for smoother transition
+            const breathingPrep = this.predictivePrep.getPreWarmIntensity('breathing');
+            this.trailIntensity = baseIntensity + emotionalBoost + breathingPrep * 0.5;
+        }
+
+        // ENHANCED: Predictive preparation for activation stage
+        if (this.transitionCoordinator.predictivePreparationEnabled) {
+            this.predictivePrep.preWarmNextStageEffects(
+                this.currentState, 
+                ANIMATION_STATES.ACTIVATION, 
+                this.stateProgress
+            );
+        }
+
+        // Perfect completion transition with emotional awareness
         if (this.stateProgress >= 1.0) {
             if (this.currentState === ANIMATION_STATES.X_BREATHING) {
-                console.log('Seamless breathing complete with perfect harmony');
+                const emotionalState = this.emotionalEngine.currentDominantEmotion;
+                const breathingHarmony = this.particleEnergyState.harmonicBalance;
+                console.log(`🫁 Seamless breathing complete with perfect harmony - Emotional: ${emotionalState}, Harmony: ${breathingHarmony.toFixed(3)}`);
                 this.loadingComplete = true;
                 this.transitionToState(ANIMATION_STATES.ACTIVATION);
             }
@@ -1621,10 +2758,19 @@ class ParticleAnimation {
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
         this.stateProgress = Math.min(phaseTime / duration, 1);
 
-        // Epic Enhancement: Enable energy trails during activation
-        if (!this.enableTrails && this.stateProgress > 0.2) {
+        // Epic Enhancement: Smooth trail activation from pre-warmed state
+        if (!this.enableTrails && this.stateProgress > 0.0) {
             this.enableTrails = true;
-            console.log('🔥 Epic energy trails activated!');
+            console.log('🔥 Epic energy trails smoothly activated from pre-warm!');
+        }
+        
+        // Enhanced trail intensity with breathing transition continuity
+        if (this.trailPrewarm) {
+            // Continue from pre-warm intensity and enhance gradually
+            this.trailIntensity = 0.3 + (this.stateProgress * 0.7); // From pre-warm 0.3 to full 1.0
+        } else {
+            // Fallback for direct activation
+            this.trailIntensity = Math.min(this.stateProgress / 0.2, 1.0);
         }
 
         // Epic Enhancement: Trigger camera shake at peak activation
@@ -1662,11 +2808,29 @@ class ParticleAnimation {
             const activationData = this.calculateActivationPhase(i, this.stateProgress);
             const { phase, intensity, localProgress } = activationData;
             
-            // 获取对应阶段的颜色
-            const color = this.getActivationColor(phase, intensity, localProgress);
-            colors[index] = color.r;
-            colors[index + 1] = color.g;
-            colors[index + 2] = color.b;
+            // Enhanced color transition from breathing to activation
+            let finalColor;
+            if (this.stateProgress < 0.25) {
+                // Smooth transition from breathing phase colors
+                const transitionProgress = this.stateProgress / 0.25;
+                const breathingColor = this.calculateXShapeGradientColor(1.0, i, { x: baseX, y: baseY, z: baseZ });
+                const activationColor = this.getActivationColor(phase, intensity, localProgress);
+                
+                // Elegant blend with sigmoid easing
+                const blendFactor = this.elegantSigmoidEasing(transitionProgress);
+                finalColor = {
+                    r: breathingColor.r + (activationColor.r - breathingColor.r) * blendFactor,
+                    g: breathingColor.g + (activationColor.g - breathingColor.g) * blendFactor,
+                    b: breathingColor.b + (activationColor.b - breathingColor.b) * blendFactor
+                };
+            } else {
+                // Pure activation colors after smooth transition
+                finalColor = this.getActivationColor(phase, intensity, localProgress);
+            }
+            
+            colors[index] = finalColor.r;
+            colors[index + 1] = finalColor.g;
+            colors[index + 2] = finalColor.b;
             
             // 神经连接式的位置调整
             let positionOffset = { x: 0, y: 0, z: 0 };
@@ -2270,6 +3434,18 @@ class ParticleAnimation {
         this.currentState = newState;
         this.stateProgress = 0;
         
+        // ENHANCED: Reset predictive preparation system for new state
+        if (this.transitionCoordinator.predictivePreparationEnabled) {
+            this.predictivePrep.resetPreparation();
+        }
+        
+        // ENHANCED: Log transition with emotional context
+        if (this.transitionCoordinator.emotionalResponseEnabled) {
+            const emotionalState = this.emotionalEngine.currentDominantEmotion;
+            const emotionalIntensity = this.emotionalEngine.emotionalStates[emotionalState].intensity;
+            console.log(`🔄 Transitioning to ${newState} - Emotional: ${emotionalState} (${emotionalIntensity.toFixed(2)})`);
+        }
+        
         // Track phase start times for continuous transitions
         const currentTime = this.globalTime;
         switch(newState) {
@@ -2278,6 +3454,7 @@ class ParticleAnimation {
                 break;
             case ANIMATION_STATES.X_BREATHING:
                 this.phaseStartTime = currentTime;
+                this.breathingInitLogged = false; // Reset breathing init log flag
                 break;
             case ANIMATION_STATES.ACTIVATION:
                 this.phaseStartTime = currentTime;
@@ -2292,6 +3469,9 @@ class ParticleAnimation {
                 this.phaseStartTime = currentTime;
                 break;
         }
+        
+        // ENHANCED: Record transition in coordination system
+        this.transitionCoordinator.lastStateTransition = currentTime;
     }
     
     captureCurrentPositions() {
@@ -2323,11 +3503,16 @@ class ParticleAnimation {
             }, 1000);
         });
         
-        // Mouse/touch interaction
+        // ENHANCED: Mouse/touch interaction with environmental awareness
         const updateMousePosition = (clientX, clientY) => {
             const rect = canvas.getBoundingClientRect();
             this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
             this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            
+            // Update environmental awareness with mouse behavior
+            if (this.transitionCoordinator.environmentalAdaptationEnabled) {
+                this.environmentalAwareness.updateMouseBehavior(clientX, clientY);
+            }
         };
         
         // Mouse events
@@ -2400,10 +3585,8 @@ class ParticleAnimation {
                 this.particles.material.uniforms.time.value = performance.now() * 0.001;
             }
             
-            // Epic Enhancement: Update energy trail system with performance optimization
-            if (this.frameCount % 2 === 0) { // Update every other frame for better performance
-                this.updateEnergyTrails();
-            }
+            // Epic Enhancement: Update energy trail system
+            this.updateEnergyTrails();
             
             // Epic Enhancement: Update visual effects
             this.updateGodRayVisuals();
@@ -2684,11 +3867,27 @@ class ParticleAnimation {
 
         this.particles.geometry.attributes.position.needsUpdate = true;
         
-        // Epic Enhancement: Clean up epic systems
+        // ENHANCED: Clean up all enhancement systems
         this.enableTrails = false;
+        this.trailPrewarm = false;
+        this.trailIntensity = 0.0;
         this.godRays.active = false;
         this.mouseMagnetism.enabled = false;
         // this.stopProceduralAudio(); // Audio system disabled
+        
+        // Reset advanced transition systems
+        if (this.predictivePrep) {
+            this.predictivePrep.resetPreparation();
+        }
+        
+        // Reset particle energy state
+        this.particleEnergyState = {
+            averageEnergy: 0,
+            energyDistribution: 0,
+            harmonicBalance: 0,
+            convergenceRate: 0,
+            lastUpdate: 0
+        };
         
         // Hide god rays and trails
         if (this.godRayMeshes) {
@@ -2698,7 +3897,7 @@ class ParticleAnimation {
             this.trailMeshes.forEach(trail => trail.visible = false);
         }
         
-        console.log('🎯 Epic animation reset - ready for world-class convergence!');
+        console.log('🎯 Enhanced animation reset - ready for emotionally intelligent convergence!');
 
         // Start the organic 5-stage animation sequence
         setTimeout(() => {
@@ -2983,6 +4182,60 @@ class ParticleAnimation {
             performanceMode: this.performanceMode,
             frameCount: this.frameCount
         };
+    }
+
+    // ENHANCED: Advanced transition control methods
+    setTransitionSmoothnessLevel(level) {
+        if (['basic', 'smooth', 'ultra'].includes(level)) {
+            this.transitionCoordinator.smoothnessLevel = level;
+            console.log(`🎚️ Transition smoothness set to: ${level}`);
+        }
+    }
+
+    toggleEmotionalResponse() {
+        this.transitionCoordinator.emotionalResponseEnabled = !this.transitionCoordinator.emotionalResponseEnabled;
+        console.log(`💭 Emotional response: ${this.transitionCoordinator.emotionalResponseEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    toggleAdaptiveTiming() {
+        this.transitionCoordinator.adaptiveTimingEnabled = !this.transitionCoordinator.adaptiveTimingEnabled;
+        console.log(`⏱️ Adaptive timing: ${this.transitionCoordinator.adaptiveTimingEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    togglePredictivePreparation() {
+        this.transitionCoordinator.predictivePreparationEnabled = !this.transitionCoordinator.predictivePreparationEnabled;
+        console.log(`🔮 Predictive preparation: ${this.transitionCoordinator.predictivePreparationEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    toggleEnvironmentalAdaptation() {
+        this.transitionCoordinator.environmentalAdaptationEnabled = !this.transitionCoordinator.environmentalAdaptationEnabled;
+        console.log(`🌍 Environmental adaptation: ${this.transitionCoordinator.environmentalAdaptationEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    // Get current transition enhancement status
+    getTransitionStatus() {
+        return {
+            smoothnessLevel: this.transitionCoordinator.smoothnessLevel,
+            emotionalResponse: this.transitionCoordinator.emotionalResponseEnabled,
+            adaptiveTiming: this.transitionCoordinator.adaptiveTimingEnabled,
+            predictivePreparation: this.transitionCoordinator.predictivePreparationEnabled,
+            environmentalAdaptation: this.transitionCoordinator.environmentalAdaptationEnabled,
+            currentEmotion: this.emotionalEngine.currentDominantEmotion,
+            emotionalIntensity: this.emotionalEngine.emotionalStates[this.emotionalEngine.currentDominantEmotion]?.intensity || 0,
+            particleEnergyState: this.particleEnergyState,
+            environmentalState: this.environmentalAwareness.getEnvironmentalState()
+        };
+    }
+
+    // Debug mode for development
+    toggleDebugMode() {
+        this.transitionCoordinator.debugMode = !this.transitionCoordinator.debugMode;
+        console.log(`🐛 Debug mode: ${this.transitionCoordinator.debugMode ? 'enabled' : 'disabled'}`);
+        
+        if (this.transitionCoordinator.debugMode) {
+            // Log current status
+            console.log('Current transition status:', this.getTransitionStatus());
+        }
     }
 }
 
