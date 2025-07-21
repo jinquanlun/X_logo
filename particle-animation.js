@@ -261,7 +261,7 @@ class ParticleAnimation {
         this.particleDelays = [];      // Individual emergence delays
         this.particleSeeds = [];       // Unique random seeds
         this.particleCurvatures = [];  // Individual curve preferences
-        this.particleEnergies = [];    // Individual energy levels
+        this.particleEnergies = [];    // Individual energy level
         this.particleLifePhases = [];  // Individual life cycle phases
         this.particleNoiseOffsets = [];// Individual noise offsets for organic motion
         this.particleFluidVelocities = []; // Fluid dynamics velocities
@@ -271,6 +271,36 @@ class ParticleAnimation {
         this.particleFrictions = [];   // Individual friction coefficients
         this.particleSpringConstants = []; // Individual spring constants
         this.particleOrganicSeeds = []; // Multiple seeds for different organic behaviors
+        
+        // Epic Enhancement: Energy Trail System
+        this.particleTrails = [];      // Trail history for each particle
+        this.trailLength = 15;         // Number of trail points per particle
+        this.trailFadeSpeed = 0.95;    // Trail alpha decay rate
+        this.enableTrails = false;     // Trail system toggle
+        
+        // Epic Enhancement: Cinematic Camera System  
+        this.cameraShake = { intensity: 0, duration: 0, time: 0 };
+        this.dynamicFOV = 75;          // Field of view for dramatic effect
+        this.depthOfField = { focus: 5, blur: 0 };
+        
+        // Epic Enhancement: Volumetric God Rays
+        this.godRays = { intensity: 0, angle: 0, active: false };
+        this.lightBeams = [];          // Light beam effect arrays
+        
+        // Epic Enhancement: Mouse Magnetism System
+        this.mousePosition = { x: 0, y: 0, z: 0 };
+        this.mouseMagnetism = { enabled: false, strength: 0.3, radius: 2.0 };
+        this.setupMouseInteraction();
+        
+        // Epic Enhancement: Procedural Audio System (DISABLED)
+        this.audioSystem = {
+            enabled: false,
+            context: null,
+            oscillators: [],
+            gainNodes: [],
+            masterGain: null
+        };
+        // this.initializeAudioSystem(); // Audio system disabled
         
         this.init();
     }
@@ -427,15 +457,290 @@ class ParticleAnimation {
         // Initialize simplified particle properties for elegant performance
         this.particleSeeds = [];
         this.particlePhases = [];
+        this.particleTrails = [];
         
         for (let i = 0; i < this.particleCount; i++) {
             // Simple but elegant particle variation
             this.particleSeeds.push(Math.random());
             this.particlePhases.push(Math.random() * Math.PI * 2);
+            
+            // Initialize epic trail system
+            this.particleTrails.push([]);
         }
     }
     
-    // Fluid dynamics helper methods
+    // Epic Enhancement: Update Energy Trail System
+    updateEnergyTrails() {
+        if (!this.enableTrails || !this.particles) return;
+        
+        const positions = this.particles.geometry.attributes.position.array;
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const index = i * 3;
+            const currentPos = {
+                x: positions[index],
+                y: positions[index + 1],
+                z: positions[index + 2],
+                time: this.globalTime
+            };
+            
+            // Add current position to trail
+            this.particleTrails[i].unshift(currentPos);
+            
+            // Limit trail length
+            if (this.particleTrails[i].length > this.trailLength) {
+                this.particleTrails[i].pop();
+            }
+            
+            // Update trail alpha values
+            for (let j = 0; j < this.particleTrails[i].length; j++) {
+                const trailPoint = this.particleTrails[i][j];
+                const alpha = Math.pow(this.trailFadeSpeed, j);
+                trailPoint.alpha = alpha;
+            }
+        }
+    }
+    
+    // Epic Enhancement: Cinematic Camera Effects
+    updateCinematicCamera() {
+        if (!this.camera) return;
+        
+        // Camera shake during activation
+        if (this.cameraShake.intensity > 0) {
+            const shakeAmount = this.cameraShake.intensity * 0.02;
+            this.camera.position.x += (Math.random() - 0.5) * shakeAmount;
+            this.camera.position.y += (Math.random() - 0.5) * shakeAmount;
+            
+            this.cameraShake.time += 16;
+            if (this.cameraShake.time >= this.cameraShake.duration) {
+                this.cameraShake.intensity = 0;
+            }
+        }
+        
+        // Dynamic FOV based on animation state
+        let targetFOV = 75;
+        if (this.currentState === ANIMATION_STATES.ACTIVATION) {
+            targetFOV = 85; // Wider FOV for dramatic effect
+        } else if (this.currentState === ANIMATION_STATES.DISSIPATING) {
+            targetFOV = 65; // Narrower FOV for focus
+        }
+        
+        this.camera.fov += (targetFOV - this.camera.fov) * 0.02;
+        this.camera.updateProjectionMatrix();
+    }
+    
+    // Epic Enhancement: Trigger Camera Shake
+    triggerCameraShake(intensity = 1.0, duration = 500) {
+        this.cameraShake.intensity = intensity;
+        this.cameraShake.duration = duration;
+        this.cameraShake.time = 0;
+    }
+
+    // Epic Enhancement: Create Volumetric God Ray System
+    createGodRaySystem() {
+        const rayCount = 8;
+        const rayGeometry = new THREE.PlaneGeometry(0.1, 6);
+        const rayMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+
+        this.godRayMeshes = [];
+        for (let i = 0; i < rayCount; i++) {
+            const ray = new THREE.Mesh(rayGeometry, rayMaterial.clone());
+            ray.position.set(0, 0, 0);
+            ray.rotation.z = (i / rayCount) * Math.PI * 2;
+            ray.visible = false;
+            this.scene.add(ray);
+            this.godRayMeshes.push(ray);
+        }
+    }
+
+    // Epic Enhancement: Create Trail System Geometry  
+    createTrailSystem() {
+        // Create trail line geometries
+        this.trailMeshes = [];
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const trailGeometry = new THREE.BufferGeometry();
+            const trailPositions = new Float32Array(this.trailLength * 3);
+            const trailColors = new Float32Array(this.trailLength * 3);
+            
+            trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+            trailGeometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
+            
+            const trailMaterial = new THREE.LineBasicMaterial({
+                vertexColors: true,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const trailLine = new THREE.Line(trailGeometry, trailMaterial);
+            trailLine.visible = false;
+            this.scene.add(trailLine);
+            this.trailMeshes.push(trailLine);
+        }
+    }
+
+    // Epic Enhancement: Update God Ray Visual Effects (OPTIMIZED)
+    updateGodRayVisuals() {
+        if (!this.godRayMeshes) return;
+        
+        this.godRayMeshes.forEach((ray, index) => {
+            if (this.godRays.active) {
+                ray.visible = true;
+                // Much more subtle opacity
+                ray.material.opacity = this.godRays.intensity * 0.08; // Reduced from 0.3 to 0.08
+                ray.rotation.z = (index / this.godRayMeshes.length) * Math.PI * 2 + this.godRays.angle;
+                
+                // More subtle colors - softer tones
+                const rayColor = index % 2 === 0 ? 
+                    new THREE.Color(0.8, 0.5, 0.2) :  // Softer orange
+                    new THREE.Color(0.3, 0.5, 0.8);   // Softer blue
+                ray.material.color = rayColor;
+            } else {
+                ray.visible = false;
+            }
+        });
+    }
+
+    // Epic Enhancement: Update Trail Visual Effects  
+    updateTrailVisuals() {
+        if (!this.enableTrails || !this.trailMeshes) return;
+        
+        for (let i = 0; i < this.particleCount && i < this.trailMeshes.length; i++) {
+            const trail = this.particleTrails[i];
+            const trailMesh = this.trailMeshes[i];
+            
+            if (trail.length > 1) {
+                trailMesh.visible = true;
+                
+                const positions = trailMesh.geometry.attributes.position.array;
+                const colors = trailMesh.geometry.attributes.color.array;
+                
+                // Update trail positions and colors
+                for (let j = 0; j < this.trailLength; j++) {
+                    if (j < trail.length) {
+                        const point = trail[j];
+                        positions[j * 3] = point.x;
+                        positions[j * 3 + 1] = point.y;
+                        positions[j * 3 + 2] = point.z;
+                        
+                        // Color based on X gradient
+                        const distance = Math.sqrt(point.x * point.x + point.y * point.y);
+                        const gradientT = Math.min(distance / 4, 1);
+                        const alpha = point.alpha || (1 - j / this.trailLength);
+                        
+                        colors[j * 3] = (1.0 - gradientT * 0.8) * alpha;     // Red
+                        colors[j * 3 + 1] = (0.65 - gradientT * 0.45) * alpha; // Green  
+                        colors[j * 3 + 2] = (gradientT * 0.8) * alpha;      // Blue
+                    } else {
+                        // Empty positions for unused trail points
+                        positions[j * 3] = 0;
+                        positions[j * 3 + 1] = 0;
+                        positions[j * 3 + 2] = 0;
+                        colors[j * 3] = 0;
+                        colors[j * 3 + 1] = 0;
+                        colors[j * 3 + 2] = 0;
+                    }
+                }
+                
+                trailMesh.geometry.attributes.position.needsUpdate = true;
+                trailMesh.geometry.attributes.color.needsUpdate = true;
+                trailMesh.geometry.setDrawRange(0, Math.min(trail.length, this.trailLength));
+            } else {
+                trailMesh.visible = false;
+            }
+                }
+    }
+
+    // Epic Enhancement: Setup Mouse Interaction
+    setupMouseInteraction() {
+        if (typeof window !== 'undefined' && window.addEventListener) {
+            window.addEventListener('mousemove', (event) => {
+                if (!this.camera || !this.renderer) return;
+                
+                // Convert mouse coordinates to 3D space
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                // Project mouse position to 3D space
+                const vector = new THREE.Vector3(mouseX, mouseY, 0);
+                vector.unproject(this.camera);
+                
+                const direction = vector.sub(this.camera.position).normalize();
+                const distance = -this.camera.position.z / direction.z;
+                
+                this.mousePosition.x = this.camera.position.x + direction.x * distance;
+                this.mousePosition.y = this.camera.position.y + direction.y * distance;
+                this.mousePosition.z = 0;
+            });
+        }
+    }
+
+    // Epic Enhancement: Apply Mouse Magnetism to Particles
+    applyMouseMagnetism(positions) {
+        if (!this.mouseMagnetism.enabled || !positions) return;
+        
+        for (let i = 0; i < this.particleCount; i++) {
+            const index = i * 3;
+            const px = positions[index];
+            const py = positions[index + 1];
+            const pz = positions[index + 2];
+            
+            // Calculate distance to mouse
+            const dx = this.mousePosition.x - px;
+            const dy = this.mousePosition.y - py;
+            const dz = this.mousePosition.z - pz;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Apply magnetism if within radius
+            if (distance < this.mouseMagnetism.radius && distance > 0.1) {
+                const force = this.mouseMagnetism.strength * (1 - distance / this.mouseMagnetism.radius);
+                const normalizedForce = force * 0.02; // Scale down the effect
+                
+                positions[index] += dx / distance * normalizedForce;
+                positions[index + 1] += dy / distance * normalizedForce;
+                positions[index + 2] += dz / distance * normalizedForce;
+            }
+                 }
+     }
+
+    // Epic Enhancement: Initialize Procedural Audio System (DISABLED)
+    initializeAudioSystem() {
+        // Audio system completely disabled to avoid browser autoplay issues
+        console.log('🔇 Audio system disabled - focusing on visual effects only');
+    }
+
+    // Epic Enhancement: Generate Ambient Tones Based on Particle Energy (DISABLED)
+    updateProceduralAudio() {
+        // Audio system completely disabled
+        return;
+    }
+
+    // Epic Enhancement: Create Ambient Tone Oscillators (DISABLED)
+    createAmbientTones(baseFreq) {
+        // Audio system completely disabled
+        return;
+    }
+
+    // Epic Enhancement: Update Ambient Tone Parameters (DISABLED)
+    updateAmbientTones(frequency, energy) {
+        // Audio system completely disabled
+        return;
+    }
+
+    // Epic Enhancement: Stop Procedural Audio (DISABLED)
+    stopProceduralAudio() {
+        // Audio system completely disabled
+        return;
+    }
+      
+     // Fluid dynamics helper methods
     updateParticleNeighbors() {
         const neighborRadius = 0.5;
         const maxNeighbors = 8;
@@ -793,6 +1098,12 @@ class ParticleAnimation {
         // 创建粒子系统
         this.particles = new THREE.Points(geometry, material);
         this.scene.add(this.particles);
+        
+        // Epic Enhancement: Create God Ray System
+        this.createGodRaySystem();
+        
+        // Epic Enhancement: Create Trail System Geometry
+        this.createTrailSystem();
         
         // 隐藏开始按钮并开始新的动画序列
         document.getElementById('startButton').style.display = 'none';
@@ -1199,11 +1510,30 @@ class ParticleAnimation {
         }
     }
     
-    // Stage 3: Organic Particle Activation - Energizing the X
+    // Stage 3: Epic Particle Activation - Energizing the X with Cinematic Effects
     updateActivationState() {
         const duration = STAGE_DURATIONS.ACTIVATION;
         const phaseTime = this.globalTime - (this.phaseStartTime || 0);
         this.stateProgress = Math.min(phaseTime / duration, 1);
+
+        // Epic Enhancement: Enable energy trails during activation
+        if (!this.enableTrails && this.stateProgress > 0.2) {
+            this.enableTrails = true;
+            console.log('🔥 Epic energy trails activated!');
+        }
+
+        // Epic Enhancement: Trigger camera shake at peak activation
+        if (this.stateProgress > 0.6 && this.stateProgress < 0.65 && this.cameraShake.intensity === 0) {
+            this.triggerCameraShake(2.0, 800);
+            console.log('📹 Cinematic camera shake triggered!');
+        }
+
+        // Epic Enhancement: Activate god rays during mid-activation (REDUCED INTENSITY)
+        if (this.stateProgress > 0.4) {
+            this.godRays.active = true;
+            this.godRays.intensity = Math.sin((this.stateProgress - 0.4) * Math.PI / 0.6) * 0.2; // Reduced from 0.8 to 0.2
+            this.godRays.angle += 0.01; // Slower rotation
+        }
 
         // 初始化激活种子（仅在第一次运行时）
         if (!this.activationSeeds) {
@@ -1965,6 +2295,33 @@ class ParticleAnimation {
                 this.particles.material.uniforms.time.value = performance.now() * 0.001;
             }
             
+            // Epic Enhancement: Update energy trail system
+            this.updateEnergyTrails();
+            
+            // Epic Enhancement: Update visual effects
+            this.updateGodRayVisuals();
+            this.updateTrailVisuals();
+            
+            // Epic Enhancement: Apply mouse magnetism during breathing phase
+            if (this.currentState === ANIMATION_STATES.X_BREATHING) {
+                this.mouseMagnetism.enabled = true;
+                this.applyMouseMagnetism(this.particles.geometry.attributes.position.array);
+                this.particles.geometry.attributes.position.needsUpdate = true;
+            } else {
+                this.mouseMagnetism.enabled = false;
+            }
+            
+            // Epic Enhancement: Update procedural audio (DISABLED)
+            // Audio system completely disabled to avoid browser autoplay issues
+            // if (this.currentState === ANIMATION_STATES.ACTIVATION || 
+            //     this.currentState === ANIMATION_STATES.X_BREATHING) {
+            //     this.audioSystem.enabled = true;
+            //     this.updateProceduralAudio();
+            // } else if (this.audioSystem.enabled) {
+            //     this.audioSystem.enabled = false;
+            //     this.stopProceduralAudio();
+            // }
+            
             // 大幅减少更新频率
             const shouldUpdate = !this.performanceMode || this.frameCount % 5 === 0;
             
@@ -1983,6 +2340,9 @@ class ParticleAnimation {
             //     }
             // }
         }
+        
+        // Epic Enhancement: Update cinematic camera effects
+        this.updateCinematicCamera();
         
         // Update camera for smooth movement
         this.updateCamera();
@@ -2216,7 +2576,22 @@ class ParticleAnimation {
         }
 
         this.particles.geometry.attributes.position.needsUpdate = true;
-        console.log('Animation reset - ready for organic convergence');
+        
+        // Epic Enhancement: Clean up epic systems
+        this.enableTrails = false;
+        this.godRays.active = false;
+        this.mouseMagnetism.enabled = false;
+        // this.stopProceduralAudio(); // Audio system disabled
+        
+        // Hide god rays and trails
+        if (this.godRayMeshes) {
+            this.godRayMeshes.forEach(ray => ray.visible = false);
+        }
+        if (this.trailMeshes) {
+            this.trailMeshes.forEach(trail => trail.visible = false);
+        }
+        
+        console.log('🎯 Epic animation reset - ready for world-class convergence!');
 
         // Start the organic 5-stage animation sequence
         setTimeout(() => {
