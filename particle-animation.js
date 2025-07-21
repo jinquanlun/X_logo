@@ -272,11 +272,14 @@ class ParticleAnimation {
         this.particleSpringConstants = []; // Individual spring constants
         this.particleOrganicSeeds = []; // Multiple seeds for different organic behaviors
         
-        // Epic Enhancement: Energy Trail System
+        // Epic Enhancement: Advanced Energy Trail System
         this.particleTrails = [];      // Trail history for each particle
-        this.trailLength = 15;         // Number of trail points per particle
-        this.trailFadeSpeed = 0.95;    // Trail alpha decay rate
+        this.particleVelocities = [];  // Velocity history for smooth trails
+        this.trailLength = 25;         // Increased trail length for smoother effect
+        this.trailFadeSpeed = 0.92;    // Slower fade for longer trails
         this.enableTrails = false;     // Trail system toggle
+        this.trailSmoothing = 0.8;     // Smoothing factor for trail interpolation
+        this.velocityInfluence = 0.3;  // How much velocity affects trail length
         
         // Epic Enhancement: Cinematic Camera System  
         this.cameraShake = { intensity: 0, duration: 0, time: 0 };
@@ -464,12 +467,13 @@ class ParticleAnimation {
             this.particleSeeds.push(Math.random());
             this.particlePhases.push(Math.random() * Math.PI * 2);
             
-            // Initialize epic trail system
+            // Initialize advanced trail system
             this.particleTrails.push([]);
+            this.particleVelocities.push(0);
         }
     }
     
-    // Epic Enhancement: Update Energy Trail System
+    // Epic Enhancement: Advanced Energy Trail System with Smoothing
     updateEnergyTrails() {
         if (!this.enableTrails || !this.particles) return;
         
@@ -484,19 +488,55 @@ class ParticleAnimation {
                 time: this.globalTime
             };
             
-            // Add current position to trail
-            this.particleTrails[i].unshift(currentPos);
-            
-            // Limit trail length
-            if (this.particleTrails[i].length > this.trailLength) {
-                this.particleTrails[i].pop();
+            // Calculate velocity for dynamic trail length
+            let velocity = 0;
+            if (this.particleTrails[i].length > 0) {
+                const lastPos = this.particleTrails[i][0];
+                const dx = currentPos.x - lastPos.x;
+                const dy = currentPos.y - lastPos.y;
+                const dz = currentPos.z - lastPos.z;
+                velocity = Math.sqrt(dx * dx + dy * dy + dz * dz);
             }
             
-            // Update trail alpha values
+            // Store velocity for smooth interpolation
+            this.particleVelocities[i] = velocity;
+            
+            // Dynamic trail length based on velocity
+            const dynamicTrailLength = Math.max(15, Math.min(this.trailLength, 
+                15 + Math.floor(velocity * this.velocityInfluence * 20)));
+            
+            // Add current position to trail with smoothing
+            if (this.particleTrails[i].length > 0) {
+                const lastPos = this.particleTrails[i][0];
+                const smoothedPos = {
+                    x: lastPos.x + (currentPos.x - lastPos.x) * this.trailSmoothing,
+                    y: lastPos.y + (currentPos.y - lastPos.y) * this.trailSmoothing,
+                    z: lastPos.z + (currentPos.z - lastPos.z) * this.trailSmoothing,
+                    time: this.globalTime,
+                    velocity: velocity
+                };
+                this.particleTrails[i].unshift(smoothedPos);
+            } else {
+                currentPos.velocity = velocity;
+                this.particleTrails[i].unshift(currentPos);
+            }
+            
+            // Limit trail length dynamically
+            if (this.particleTrails[i].length > dynamicTrailLength) {
+                this.particleTrails[i].splice(dynamicTrailLength);
+            }
+            
+            // Update trail alpha values with enhanced fade
             for (let j = 0; j < this.particleTrails[i].length; j++) {
                 const trailPoint = this.particleTrails[i][j];
-                const alpha = Math.pow(this.trailFadeSpeed, j);
+                const normalizedAge = j / this.particleTrails[i].length;
+                const alpha = Math.pow(this.trailFadeSpeed, j) * (1 - normalizedAge * 0.3);
                 trailPoint.alpha = alpha;
+            }
+            
+            // Apply advanced smoothing to trail positions
+            if (this.particleTrails[i].length > 3) {
+                this.smoothTrailPositions(i);
             }
         }
     }
@@ -607,7 +647,7 @@ class ParticleAnimation {
         });
     }
 
-    // Epic Enhancement: Update Trail Visual Effects  
+    // Epic Enhancement: Advanced Trail Visual Effects with Elegant Colors
     updateTrailVisuals() {
         if (!this.enableTrails || !this.trailMeshes) return;
         
@@ -621,7 +661,7 @@ class ParticleAnimation {
                 const positions = trailMesh.geometry.attributes.position.array;
                 const colors = trailMesh.geometry.attributes.color.array;
                 
-                // Update trail positions and colors
+                // Update trail positions and enhanced colors
                 for (let j = 0; j < this.trailLength; j++) {
                     if (j < trail.length) {
                         const point = trail[j];
@@ -629,14 +669,35 @@ class ParticleAnimation {
                         positions[j * 3 + 1] = point.y;
                         positions[j * 3 + 2] = point.z;
                         
-                        // Color based on X gradient
+                        // Enhanced color system with HSL interpolation
                         const distance = Math.sqrt(point.x * point.x + point.y * point.y);
                         const gradientT = Math.min(distance / 4, 1);
                         const alpha = point.alpha || (1 - j / this.trailLength);
                         
-                        colors[j * 3] = (1.0 - gradientT * 0.8) * alpha;     // Red
-                        colors[j * 3 + 1] = (0.65 - gradientT * 0.45) * alpha; // Green  
-                        colors[j * 3 + 2] = (gradientT * 0.8) * alpha;      // Blue
+                        // Dynamic color based on trail age and velocity
+                        const trailAge = j / trail.length;
+                        const velocityFactor = point.velocity ? Math.min(point.velocity * 0.5, 1) : 0;
+                        
+                        // Create smooth color transition
+                        const baseHue = 220; // Blue base
+                        const targetHue = 30;  // Orange target
+                        const hue = baseHue + (targetHue - baseHue) * gradientT;
+                        
+                        // Add velocity-based color variation
+                        const hueVariation = velocityFactor * 20 * Math.sin(trailAge * Math.PI);
+                        const finalHue = (hue + hueVariation) % 360;
+                        
+                        // Enhanced saturation and lightness
+                        const saturation = 0.8 + velocityFactor * 0.2;
+                        const lightness = 0.4 + trailAge * 0.3 + velocityFactor * 0.2;
+                        
+                        // Convert HSL to RGB with enhanced alpha
+                        const enhancedAlpha = alpha * (1 + velocityFactor * 0.3);
+                        const rgb = this.hslToRgb(finalHue / 360, saturation, lightness);
+                        
+                        colors[j * 3] = rgb.r * enhancedAlpha;     // Red
+                        colors[j * 3 + 1] = rgb.g * enhancedAlpha; // Green  
+                        colors[j * 3 + 2] = rgb.b * enhancedAlpha; // Blue
                     } else {
                         // Empty positions for unused trail points
                         positions[j * 3] = 0;
@@ -654,7 +715,51 @@ class ParticleAnimation {
             } else {
                 trailMesh.visible = false;
             }
-                }
+        }
+    }
+
+    // Epic Enhancement: Advanced Trail Smoothing with Catmull-Rom Interpolation
+    smoothTrailPositions(particleIndex) {
+        const trail = this.particleTrails[particleIndex];
+        if (trail.length < 4) return;
+        
+        // Apply Catmull-Rom smoothing to trail positions
+        for (let i = 1; i < trail.length - 2; i++) {
+            const p0 = trail[i - 1];
+            const p1 = trail[i];
+            const p2 = trail[i + 1];
+            const p3 = trail[i + 2];
+            
+            // Catmull-Rom interpolation parameters
+            const t = 0.5; // Smoothing factor
+            
+            // Calculate smoothed position
+            const smoothedX = this.catmullRomInterpolate(p0.x, p1.x, p2.x, p3.x, t);
+            const smoothedY = this.catmullRomInterpolate(p0.y, p1.y, p2.y, p3.y, t);
+            const smoothedZ = this.catmullRomInterpolate(p0.z, p1.z, p2.z, p3.z, t);
+            
+            // Apply smoothing with velocity consideration
+            const velocity = trail[i].velocity || 0;
+            const smoothingFactor = Math.min(0.3, velocity * 0.1);
+            
+            trail[i].x += (smoothedX - trail[i].x) * smoothingFactor;
+            trail[i].y += (smoothedY - trail[i].y) * smoothingFactor;
+            trail[i].z += (smoothedZ - trail[i].z) * smoothingFactor;
+        }
+    }
+
+    // Catmull-Rom spline interpolation
+    catmullRomInterpolate(p0, p1, p2, p3, t) {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        
+        // Catmull-Rom matrix coefficients
+        const c0 = -0.5 * t3 + t2 - 0.5 * t;
+        const c1 = 1.5 * t3 - 2.5 * t2 + 1;
+        const c2 = -1.5 * t3 + 2 * t2 + 0.5 * t;
+        const c3 = 0.5 * t3 - 0.5 * t2;
+        
+        return c0 * p0 + c1 * p1 + c2 * p2 + c3 * p3;
     }
 
     // Epic Enhancement: Setup Mouse Interaction
@@ -2295,8 +2400,10 @@ class ParticleAnimation {
                 this.particles.material.uniforms.time.value = performance.now() * 0.001;
             }
             
-            // Epic Enhancement: Update energy trail system
-            this.updateEnergyTrails();
+            // Epic Enhancement: Update energy trail system with performance optimization
+            if (this.frameCount % 2 === 0) { // Update every other frame for better performance
+                this.updateEnergyTrails();
+            }
             
             // Epic Enhancement: Update visual effects
             this.updateGodRayVisuals();
