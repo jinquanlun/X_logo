@@ -72,14 +72,27 @@ class DeviceIntelligence {
         // Estimate based on device characteristics
         if (navigator.deviceMemory) return navigator.deviceMemory;
         
-        const { devicePixelRatio, hardwareConcurrency } = this.deviceProfile || {};
+        // Use direct navigator access instead of this.deviceProfile (which doesn't exist yet)
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const hardwareConcurrency = navigator.hardwareConcurrency || 4;
         const screenPixels = window.screen.width * window.screen.height;
         
-        // Heuristic estimation
-        if (screenPixels > 2000000 && hardwareConcurrency >= 8) return 8; // High-end
-        if (screenPixels > 1000000 && hardwareConcurrency >= 4) return 4; // Mid-range
-        if (hardwareConcurrency >= 2) return 2; // Low-end
-        return 1; // Very low-end
+        // Enhanced heuristic estimation for mobile devices
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // Mobile-specific memory estimation
+            if (screenPixels > 2000000 && hardwareConcurrency >= 6) return 6; // High-end mobile
+            if (screenPixels > 1000000 && hardwareConcurrency >= 4) return 4; // Mid-range mobile
+            if (hardwareConcurrency >= 2) return 2; // Low-end mobile
+            return 1; // Very low-end mobile
+        } else {
+            // Desktop estimation
+            if (screenPixels > 2000000 && hardwareConcurrency >= 8) return 8; // High-end desktop
+            if (screenPixels > 1000000 && hardwareConcurrency >= 4) return 4; // Mid-range desktop
+            if (hardwareConcurrency >= 2) return 2; // Low-end desktop
+            return 1; // Very low-end desktop
+        }
     }
 
     getConnectionType() {
@@ -357,16 +370,47 @@ class QualityManager {
     determineInitialQuality() {
         const { deviceClass, profile } = this.deviceConfig;
         
-        // Force lower quality on mobile devices for battery life
+        // Optimized mobile quality mapping - less aggressive downgrading
         if (profile.isMobile) {
-            const mobileMapping = {
-                'flagship': 'high',
-                'high': 'medium',
-                'medium': 'low',
-                'low': 'minimal',
-                'minimal': 'minimal'
-            };
-            return mobileMapping[deviceClass] || 'minimal';
+            // Check for high-end mobile devices
+            const isHighEndMobile = profile.memoryEstimate >= 4 && 
+                                   profile.hardwareConcurrency >= 6 &&
+                                   profile.screenWidth * profile.screenHeight > 2000000;
+            
+            const isMidRangeMobile = profile.memoryEstimate >= 2 && 
+                                    profile.hardwareConcurrency >= 4;
+            
+            if (isHighEndMobile) {
+                // High-end mobile: minimal downgrade
+                const mobileMapping = {
+                    'flagship': 'high',
+                    'high': 'high',      // Keep high for flagship mobiles
+                    'medium': 'medium',  // Keep medium
+                    'low': 'low',
+                    'minimal': 'minimal'
+                };
+                return mobileMapping[deviceClass] || 'medium';
+            } else if (isMidRangeMobile) {
+                // Mid-range mobile: moderate downgrade
+                const mobileMapping = {
+                    'flagship': 'medium',
+                    'high': 'medium',
+                    'medium': 'low',
+                    'low': 'minimal',
+                    'minimal': 'minimal'
+                };
+                return mobileMapping[deviceClass] || 'low';
+            } else {
+                // Low-end mobile: aggressive downgrade
+                const mobileMapping = {
+                    'flagship': 'low',
+                    'high': 'low',
+                    'medium': 'minimal',
+                    'low': 'minimal',
+                    'minimal': 'minimal'
+                };
+                return mobileMapping[deviceClass] || 'minimal';
+            }
         }
         
         return deviceClass;
@@ -894,6 +938,284 @@ class PerformanceMonitor {
         this.thermalState.baselinePerformance = null;
         this.thermalState.throttleDetected = false;
         console.log('📊 Performance metrics reset');
+    }
+}
+
+// Mobile Performance Optimizer - Advanced mobile-specific optimizations
+class MobilePerformanceOptimizer {
+    constructor(deviceProfile) {
+        this.deviceProfile = deviceProfile;
+        this.isActive = deviceProfile.isMobile || deviceProfile.isTablet;
+        
+        // GPU memory management
+        this.gpuMemoryPressure = {
+            enabled: false,
+            threshold: 0.8,
+            lastCheck: 0,
+            checkInterval: 2000
+        };
+        
+        // Dynamic frame rate limiting
+        this.dynamicFrameRate = {
+            enabled: this.isActive,
+            targetFPS: deviceProfile.isMobile ? 30 : 60,
+            adaptiveFPS: deviceProfile.isMobile ? 30 : 60,
+            lowPerformanceThreshold: 20,
+            thermalThrottleDetected: false
+        };
+        
+        // iOS Safari specific optimizations
+        this.iosSafariOptimizations = {
+            enabled: this.detectIOSSafari(),
+            memoryWarningReceived: false,
+            backgroundThrottling: true
+        };
+        
+        // Enhanced garbage collection
+        this.garbageCollection = {
+            enabled: true,
+            interval: this.isActive ? 10000 : 30000, // More frequent on mobile
+            lastGC: 0,
+            forceGCOnMemoryPressure: true
+        };
+        
+        if (this.isActive) {
+            this.initializeMobilePerformanceOptimizations();
+        }
+    }
+    
+    detectIOSSafari() {
+        const userAgent = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+        const isSafari = /Safari/.test(userAgent) && !/Chrome|Edge|Firefox/.test(userAgent);
+        return isIOS && isSafari;
+    }
+    
+    initializeMobilePerformanceOptimizations() {
+        // GPU memory pressure monitoring
+        this.setupGPUMemoryMonitoring();
+        
+        // iOS Safari specific setup
+        if (this.iosSafariOptimizations.enabled) {
+            this.setupIOSSafariOptimizations();
+        }
+        
+        // Enhanced garbage collection
+        this.setupEnhancedGarbageCollection();
+        
+        // Dynamic frame rate adjustment
+        this.setupDynamicFrameRate();
+        
+        console.log('📱 Advanced mobile performance optimizations initialized');
+    }
+    
+    setupGPUMemoryMonitoring() {
+        if (!this.isActive) return;
+        
+        // Monitor WebGL context for memory pressure
+        setInterval(() => {
+            this.checkGPUMemoryPressure();
+        }, this.gpuMemoryPressure.checkInterval);
+    }
+    
+    checkGPUMemoryPressure() {
+        if (!this.gpuMemoryPressure.enabled) return false;
+        
+        // Check for WebGL context lost events as memory pressure indicator
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+            const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+            if (gl) {
+                // Check for context lost
+                if (gl.isContextLost()) {
+                    console.log('⚠️ WebGL context lost - GPU memory pressure detected');
+                    return true;
+                }
+                
+                // Check texture memory usage
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    // Additional GPU memory checks could be added here
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    setupIOSSafariOptimizations() {
+        console.log('🍎 Setting up iOS Safari optimizations');
+        
+        // Listen for memory warnings
+        if ('onmemorywarning' in window) {
+            window.addEventListener('memorywarning', () => {
+                console.log('🍎 iOS memory warning received');
+                this.iosSafariOptimizations.memoryWarningReceived = true;
+                this.handleMemoryWarning();
+            });
+        }
+        
+        // iOS specific viewport optimizations
+        this.optimizeIOSViewport();
+        
+        // Handle iOS background/foreground transitions
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.handleIOSBackground();
+            } else {
+                this.handleIOSForeground();
+            }
+        });
+    }
+    
+    handleMemoryWarning() {
+        console.log('🍎 Handling iOS memory warning - reducing quality');
+        // Force garbage collection
+        this.forceGarbageCollection();
+        
+        // Notify the main system to reduce quality
+        if (window.animation && window.animation.setQualityLevel) {
+            window.animation.setQualityLevel('minimal');
+        }
+    }
+    
+    optimizeIOSViewport() {
+        // Prevent zoom on double tap
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 
+                'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+        }
+    }
+    
+    handleIOSBackground() {
+        if (this.iosSafariOptimizations.backgroundThrottling) {
+            console.log('🍎 iOS app backgrounded - enabling aggressive throttling');
+            this.dynamicFrameRate.adaptiveFPS = 15; // Reduce to 15 FPS in background
+        }
+    }
+    
+    handleIOSForeground() {
+        console.log('🍎 iOS app foregrounded - restoring frame rate');
+        this.dynamicFrameRate.adaptiveFPS = this.dynamicFrameRate.targetFPS;
+    }
+    
+    setupEnhancedGarbageCollection() {
+        setInterval(() => {
+            this.performSmartGarbageCollection();
+        }, this.garbageCollection.interval);
+    }
+    
+    performSmartGarbageCollection() {
+        const now = performance.now();
+        
+        // Check if we should perform GC
+        if (now - this.garbageCollection.lastGC < this.garbageCollection.interval) {
+            return;
+        }
+        
+        // Force GC if available (Chrome DevTools)
+        if (window.gc && this.garbageCollection.enabled) {
+            try {
+                window.gc();
+                console.log('🗑️ Manual garbage collection performed');
+            } catch (e) {
+                // GC not available, that's ok
+            }
+        }
+        
+        // Clear any temporary caches
+        this.clearTemporaryCaches();
+        
+        this.garbageCollection.lastGC = now;
+    }
+    
+    forceGarbageCollection() {
+        if (window.gc) {
+            try {
+                window.gc();
+                console.log('🗑️ Forced garbage collection due to memory pressure');
+            } catch (e) {
+                console.log('🗑️ Manual GC not available');
+            }
+        }
+        
+        this.clearTemporaryCaches();
+    }
+    
+    clearTemporaryCaches() {
+        // Clear any WebGL resources that can be safely cleared
+        // This would be implemented based on the specific rendering system
+        
+        // Force browser to clean up dead references
+        if (window.FinalizationRegistry) {
+            // Modern cleanup if available
+        }
+    }
+    
+    setupDynamicFrameRate() {
+        if (!this.dynamicFrameRate.enabled) return;
+        
+        // Monitor performance and adjust frame rate dynamically
+        setInterval(() => {
+            this.adjustDynamicFrameRate();
+        }, 1000); // Check every second
+    }
+    
+    adjustDynamicFrameRate() {
+        if (!window.animation || !window.animation.performanceMonitor) return;
+        
+        const perfState = window.animation.performanceMonitor.getPerformanceState();
+        const currentFPS = perfState.fps.current;
+        
+        // Detect thermal throttling
+        if (currentFPS < this.dynamicFrameRate.lowPerformanceThreshold) {
+            if (!this.dynamicFrameRate.thermalThrottleDetected) {
+                this.dynamicFrameRate.thermalThrottleDetected = true;
+                console.log('🌡️ Thermal throttling detected - reducing target FPS');
+            }
+            
+            // Reduce target FPS
+            this.dynamicFrameRate.adaptiveFPS = Math.max(15, this.dynamicFrameRate.adaptiveFPS * 0.8);
+        } else if (currentFPS > this.dynamicFrameRate.targetFPS * 0.9) {
+            // Performance is good, can increase FPS
+            if (this.dynamicFrameRate.adaptiveFPS < this.dynamicFrameRate.targetFPS) {
+                this.dynamicFrameRate.adaptiveFPS = Math.min(
+                    this.dynamicFrameRate.targetFPS, 
+                    this.dynamicFrameRate.adaptiveFPS * 1.1
+                );
+                
+                if (this.dynamicFrameRate.thermalThrottleDetected) {
+                    this.dynamicFrameRate.thermalThrottleDetected = false;
+                    console.log('🌡️ Thermal throttling resolved - restoring FPS');
+                }
+            }
+        }
+    }
+    
+    getOptimizationState() {
+        return {
+            active: this.isActive,
+            gpuMemoryPressure: this.gpuMemoryPressure.enabled,
+            iosSafari: this.iosSafariOptimizations.enabled,
+            dynamicFrameRate: this.dynamicFrameRate,
+            garbageCollection: this.garbageCollection,
+            memoryWarning: this.iosSafariOptimizations.memoryWarningReceived
+        };
+    }
+    
+    enableGPUMemoryMonitoring() {
+        this.gpuMemoryPressure.enabled = true;
+        console.log('📱 GPU memory pressure monitoring enabled');
+    }
+    
+    disableGPUMemoryMonitoring() {
+        this.gpuMemoryPressure.enabled = false;
+        console.log('📱 GPU memory pressure monitoring disabled');
+    }
+    
+    getAdaptiveFPS() {
+        return this.dynamicFrameRate.adaptiveFPS;
     }
 }
 
@@ -2040,6 +2362,7 @@ class ParticleAnimation {
         // Initialize intelligent systems
         this.qualityManager = new QualityManager(deviceConfig);
         this.mobileOptimizer = new MobileOptimizer(deviceConfig.profile);
+        this.mobilePerformanceOptimizer = new MobilePerformanceOptimizer(deviceConfig.profile);
         this.performanceMonitor = new PerformanceMonitor(this.qualityManager.getTargetFPS());
         
         // Get current quality settings
@@ -4542,11 +4865,18 @@ class ParticleAnimation {
         }
         
         // Adaptive quality adjustment based on performance
-        if (this.frameCount % 60 === 0) { // Check every second
+        // Mobile devices: check every 3 seconds, Desktop: every second
+        const adaptiveCheckInterval = this.deviceIntelligence.deviceProfile.isMobile ? 180 : 60;
+        if (this.frameCount % adaptiveCheckInterval === 0) {
             const qualityChanged = this.qualityManager.adjustQualityBasedOnPerformance(frameData.fps);
             if (qualityChanged) {
                 this.applyNewQualitySettings();
             }
+        }
+        
+        // Dynamic frame rate adjustment (mobile only)
+        if (this.mobilePerformanceOptimizer.isActive) {
+            this.mobilePerformanceOptimizer.adjustDynamicFrameRate();
         }
         
         // Apply interactive forces and physics when particles exist
@@ -5264,6 +5594,7 @@ class ParticleAnimation {
         const performanceState = this.performanceMonitor.getPerformanceState();
         const mobileSettings = this.mobileOptimizer.getMobileOptimizedSettings();
         const powerState = this.mobileOptimizer.getPowerSavingState();
+        const mobilePerformanceState = this.mobilePerformanceOptimizer.getOptimizationState();
         
         return {
             device: {
@@ -5282,7 +5613,8 @@ class ParticleAnimation {
             mobile: {
                 optimizations: mobileSettings,
                 powerSaving: powerState,
-                touchState: this.mobileOptimizer.getTouchState()
+                touchState: this.mobileOptimizer.getTouchState(),
+                advancedOptimizations: mobilePerformanceState
             }
         };
     }
@@ -5372,7 +5704,49 @@ class ParticleAnimation {
         console.log('Target FPS:', info.performance.fps.target);
         console.log('Particle Count:', info.quality.settings.particleCount);
         console.log('Mobile Optimizations:', info.mobile.optimizations);
+        
+        if (info.mobile.advancedOptimizations.active) {
+            console.group('🔧 Advanced Mobile Optimizations');
+            console.log('iOS Safari:', info.mobile.advancedOptimizations.iosSafari);
+            console.log('Dynamic FPS:', info.mobile.advancedOptimizations.dynamicFrameRate.adaptiveFPS.toFixed(1));
+            console.log('GPU Memory Monitoring:', info.mobile.advancedOptimizations.gpuMemoryPressure);
+            console.log('Memory Warning:', info.mobile.advancedOptimizations.memoryWarning);
+            console.groupEnd();
+        }
+        
         console.groupEnd();
+    }
+
+    // Advanced mobile control methods
+    enableGPUMemoryMonitoring() {
+        if (this.mobilePerformanceOptimizer.isActive) {
+            this.mobilePerformanceOptimizer.enableGPUMemoryMonitoring();
+            return true;
+        }
+        return false;
+    }
+
+    disableGPUMemoryMonitoring() {
+        if (this.mobilePerformanceOptimizer.isActive) {
+            this.mobilePerformanceOptimizer.disableGPUMemoryMonitoring();
+            return true;
+        }
+        return false;
+    }
+
+    forceGarbageCollection() {
+        if (this.mobilePerformanceOptimizer.isActive) {
+            this.mobilePerformanceOptimizer.forceGarbageCollection();
+            return true;
+        }
+        return false;
+    }
+
+    getAdaptiveFPS() {
+        if (this.mobilePerformanceOptimizer.isActive) {
+            return this.mobilePerformanceOptimizer.getAdaptiveFPS();
+        }
+        return this.qualityManager.getTargetFPS();
     }
 }
 
