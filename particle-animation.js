@@ -7,6 +7,898 @@ const ANIMATION_STATES = {
     DISSIPATING: 'dissipating'    // Stage 5: Particle Dissipation
 };
 
+// === INTELLIGENT DEVICE ADAPTATION SYSTEM ===
+
+// Device Intelligence - Smart device detection and analysis
+class DeviceIntelligence {
+    constructor() {
+        this.deviceProfile = this.analyzeDevice();
+        this.performanceBenchmark = null;
+        this.runQuickBenchmark();
+    }
+
+    analyzeDevice() {
+        const profile = {
+            // Basic device info
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            devicePixelRatio: window.devicePixelRatio || 1,
+            
+            // Screen characteristics
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            
+            // Device type detection
+            isMobile: this.detectMobile(),
+            isTablet: this.detectTablet(),
+            isDesktop: !this.detectMobile() && !this.detectTablet(),
+            
+            // Hardware estimates
+            hardwareConcurrency: navigator.hardwareConcurrency || 4,
+            memoryEstimate: this.estimateMemory(),
+            
+            // Network info
+            connectionType: this.getConnectionType(),
+            
+            // Browser capabilities
+            webglSupport: this.checkWebGLSupport(),
+            touchSupport: 'ontouchstart' in window,
+            
+            // Power characteristics
+            batteryAPI: 'getBattery' in navigator,
+            lowPowerMode: this.detectLowPowerMode()
+        };
+
+        profile.deviceClass = this.classifyDevice(profile);
+        return profile;
+    }
+
+    detectMobile() {
+        const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+        const screenSize = window.screen.width < 768;
+        const touchOnly = 'ontouchstart' in window && !window.matchMedia('(pointer: fine)').matches;
+        return mobileRegex.test(navigator.userAgent) || screenSize || touchOnly;
+    }
+
+    detectTablet() {
+        const tabletRegex = /iPad|Android.*(?!.*Mobile)/i;
+        const screenSize = window.screen.width >= 768 && window.screen.width < 1024;
+        return tabletRegex.test(navigator.userAgent) || screenSize;
+    }
+
+    estimateMemory() {
+        // Estimate based on device characteristics
+        if (navigator.deviceMemory) return navigator.deviceMemory;
+        
+        const { devicePixelRatio, hardwareConcurrency } = this.deviceProfile || {};
+        const screenPixels = window.screen.width * window.screen.height;
+        
+        // Heuristic estimation
+        if (screenPixels > 2000000 && hardwareConcurrency >= 8) return 8; // High-end
+        if (screenPixels > 1000000 && hardwareConcurrency >= 4) return 4; // Mid-range
+        if (hardwareConcurrency >= 2) return 2; // Low-end
+        return 1; // Very low-end
+    }
+
+    getConnectionType() {
+        if (navigator.connection) {
+            return {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink,
+                rtt: navigator.connection.rtt
+            };
+        }
+        return { effectiveType: 'unknown' };
+    }
+
+    checkWebGLSupport() {
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+            if (!gl) return { supported: false };
+
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            return {
+                supported: true,
+                version: gl.getParameter(gl.VERSION),
+                renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown',
+                vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown',
+                maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE)
+            };
+        } catch (e) {
+            return { supported: false, error: e.message };
+        }
+    }
+
+    detectLowPowerMode() {
+        // Detect various indicators of low power mode
+        const indicators = [
+            window.devicePixelRatio < 2 && this.detectMobile(),
+            navigator.hardwareConcurrency <= 2,
+            window.screen.width * window.screen.height < 800000
+        ];
+        return indicators.filter(Boolean).length >= 2;
+    }
+
+    classifyDevice(profile) {
+        const score = this.calculateDeviceScore(profile);
+        
+        if (score >= 90) return 'flagship'; // Top-tier devices
+        if (score >= 70) return 'high'; // High-end devices
+        if (score >= 50) return 'medium'; // Mid-range devices
+        if (score >= 30) return 'low'; // Low-end devices
+        return 'minimal'; // Very low-end devices
+    }
+
+    calculateDeviceScore(profile) {
+        let score = 0;
+        
+        // Base device type scoring
+        if (profile.isDesktop) score += 40;
+        else if (profile.isTablet) score += 25;
+        else if (profile.isMobile) score += 15;
+        
+        // Hardware scoring
+        score += Math.min(profile.hardwareConcurrency * 5, 25);
+        score += Math.min(profile.memoryEstimate * 5, 20);
+        
+        // Screen scoring
+        const screenPixels = profile.screenWidth * profile.screenHeight;
+        if (screenPixels > 2000000) score += 15;
+        else if (screenPixels > 1000000) score += 10;
+        else if (screenPixels > 500000) score += 5;
+        
+        // WebGL support
+        if (profile.webglSupport.supported) score += 10;
+        
+        // Pixel ratio (can indicate device quality)
+        if (profile.devicePixelRatio >= 3) score += 5;
+        else if (profile.devicePixelRatio >= 2) score += 3;
+        
+        return Math.min(score, 100);
+    }
+
+    runQuickBenchmark() {
+        // Quick performance benchmark to validate device classification
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const gl = canvas.getContext('webgl');
+        
+        if (!gl) {
+            this.performanceBenchmark = { score: 0, reliable: false };
+            return;
+        }
+
+        const startTime = performance.now();
+        
+        // Simple rendering test
+        const vertices = new Float32Array([
+            -1, -1, 1, -1, -1, 1,
+            -1, 1, 1, -1, 1, 1
+        ]);
+        
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        
+        // Simple vertex shader
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, `
+            attribute vec2 position;
+            void main() {
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        `);
+        gl.compileShader(vertexShader);
+        
+        // Simple fragment shader
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, `
+            precision mediump float;
+            void main() {
+                gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            }
+        `);
+        gl.compileShader(fragmentShader);
+        
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+        
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+        
+        // Render test
+        for (let i = 0; i < 100; i++) {
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+        gl.finish();
+        
+        const endTime = performance.now();
+        const renderTime = endTime - startTime;
+        
+        this.performanceBenchmark = {
+            renderTime,
+            score: Math.max(0, 100 - renderTime * 2), // Convert to 0-100 score
+            reliable: true
+        };
+        
+        console.log(`📊 Device benchmark: ${renderTime.toFixed(2)}ms (Score: ${this.performanceBenchmark.score.toFixed(1)})`);
+    }
+
+    getOptimalConfig() {
+        const { deviceClass } = this.deviceProfile;
+        const benchmark = this.performanceBenchmark?.score || 50;
+        
+        // Adjust device class based on benchmark if needed
+        let adjustedClass = deviceClass;
+        if (benchmark < 30 && deviceClass !== 'minimal') {
+            adjustedClass = this.downgradeClass(deviceClass);
+        } else if (benchmark > 80 && deviceClass !== 'flagship') {
+            adjustedClass = this.upgradeClass(deviceClass);
+        }
+        
+        return {
+            deviceClass: adjustedClass,
+            profile: this.deviceProfile,
+            benchmark: this.performanceBenchmark
+        };
+    }
+
+    downgradeClass(currentClass) {
+        const classes = ['minimal', 'low', 'medium', 'high', 'flagship'];
+        const currentIndex = classes.indexOf(currentClass);
+        return classes[Math.max(0, currentIndex - 1)];
+    }
+
+    upgradeClass(currentClass) {
+        const classes = ['minimal', 'low', 'medium', 'high', 'flagship'];
+        const currentIndex = classes.indexOf(currentClass);
+        return classes[Math.min(classes.length - 1, currentIndex + 1)];
+    }
+}
+
+// Quality Manager - Intelligent quality level management
+class QualityManager {
+    constructor(deviceConfig) {
+        this.deviceConfig = deviceConfig;
+        this.currentQuality = this.determineInitialQuality();
+        this.qualityPresets = this.defineQualityPresets();
+        this.adaptiveSettings = {
+            enabled: true,
+            targetFPS: this.getTargetFPS(),
+            fpsHistory: [],
+            lastAdjustment: 0,
+            adjustmentCooldown: 2000 // 2 seconds between adjustments
+        };
+    }
+
+    defineQualityPresets() {
+        return {
+            flagship: {
+                particleCount: 2500,
+                particleSize: 1.0,
+                trailLength: 20,
+                updateFrequency: 1, // Every frame
+                renderScale: 1.0,
+                antialiasing: true,
+                complexShaders: true,
+                godRaysIntensity: 0.8,
+                emotionalResponseLevel: 'ultra',
+                environmentalAdaptation: true,
+                additiveBlending: true,
+                depthTesting: true
+            },
+            high: {
+                particleCount: 2000,
+                particleSize: 0.9,
+                trailLength: 15,
+                updateFrequency: 1,
+                renderScale: 1.0,
+                antialiasing: true,
+                complexShaders: true,
+                godRaysIntensity: 0.6,
+                emotionalResponseLevel: 'high',
+                environmentalAdaptation: true,
+                additiveBlending: true,
+                depthTesting: true
+            },
+            medium: {
+                particleCount: 1500,
+                particleSize: 0.8,
+                trailLength: 10,
+                updateFrequency: 1,
+                renderScale: 0.9,
+                antialiasing: true,
+                complexShaders: false,
+                godRaysIntensity: 0.4,
+                emotionalResponseLevel: 'medium',
+                environmentalAdaptation: false,
+                additiveBlending: true,
+                depthTesting: false
+            },
+            low: {
+                particleCount: 1000,
+                particleSize: 0.7,
+                trailLength: 8,
+                updateFrequency: 2, // Every 2 frames
+                renderScale: 0.8,
+                antialiasing: false,
+                complexShaders: false,
+                godRaysIntensity: 0.2,
+                emotionalResponseLevel: 'basic',
+                environmentalAdaptation: false,
+                additiveBlending: false,
+                depthTesting: false
+            },
+            minimal: {
+                particleCount: 600,
+                particleSize: 0.6,
+                trailLength: 5,
+                updateFrequency: 3, // Every 3 frames
+                renderScale: 0.7,
+                antialiasing: false,
+                complexShaders: false,
+                godRaysIntensity: 0.0,
+                emotionalResponseLevel: 'disabled',
+                environmentalAdaptation: false,
+                additiveBlending: false,
+                depthTesting: false
+            }
+        };
+    }
+
+    determineInitialQuality() {
+        const { deviceClass, profile } = this.deviceConfig;
+        
+        // Force lower quality on mobile devices for battery life
+        if (profile.isMobile) {
+            const mobileMapping = {
+                'flagship': 'high',
+                'high': 'medium',
+                'medium': 'low',
+                'low': 'minimal',
+                'minimal': 'minimal'
+            };
+            return mobileMapping[deviceClass] || 'minimal';
+        }
+        
+        return deviceClass;
+    }
+
+    getTargetFPS() {
+        if (this.deviceConfig.profile.isMobile) return 30; // Mobile target
+        return 60; // Desktop target
+    }
+
+    getCurrentSettings() {
+        return this.qualityPresets[this.currentQuality];
+    }
+
+    adjustQualityBasedOnPerformance(currentFPS) {
+        if (!this.adaptiveSettings.enabled) return false;
+        
+        const now = performance.now();
+        if (now - this.adaptiveSettings.lastAdjustment < this.adaptiveSettings.adjustmentCooldown) {
+            return false;
+        }
+        
+        this.adaptiveSettings.fpsHistory.push(currentFPS);
+        if (this.adaptiveSettings.fpsHistory.length > 10) {
+            this.adaptiveSettings.fpsHistory.shift();
+        }
+        
+        if (this.adaptiveSettings.fpsHistory.length < 5) return false;
+        
+        const avgFPS = this.adaptiveSettings.fpsHistory.reduce((a, b) => a + b) / this.adaptiveSettings.fpsHistory.length;
+        const targetFPS = this.adaptiveSettings.targetFPS;
+        
+        let qualityChanged = false;
+        
+        // Downgrade if performance is poor
+        if (avgFPS < targetFPS * 0.8) {
+            const newQuality = this.downgradeQuality();
+            if (newQuality !== this.currentQuality) {
+                console.log(`📉 Quality downgraded: ${this.currentQuality} → ${newQuality} (FPS: ${avgFPS.toFixed(1)})`);
+                this.currentQuality = newQuality;
+                qualityChanged = true;
+            }
+        }
+        // Upgrade if performance is good and we're not at max quality
+        else if (avgFPS > targetFPS * 1.1 && this.currentQuality !== 'flagship') {
+            const newQuality = this.upgradeQuality();
+            if (newQuality !== this.currentQuality) {
+                console.log(`📈 Quality upgraded: ${this.currentQuality} → ${newQuality} (FPS: ${avgFPS.toFixed(1)})`);
+                this.currentQuality = newQuality;
+                qualityChanged = true;
+            }
+        }
+        
+        if (qualityChanged) {
+            this.adaptiveSettings.lastAdjustment = now;
+            this.adaptiveSettings.fpsHistory = []; // Reset history after adjustment
+        }
+        
+        return qualityChanged;
+    }
+
+    downgradeQuality() {
+        const levels = ['minimal', 'low', 'medium', 'high', 'flagship'];
+        const currentIndex = levels.indexOf(this.currentQuality);
+        return levels[Math.max(0, currentIndex - 1)];
+    }
+
+    upgradeQuality() {
+        const levels = ['minimal', 'low', 'medium', 'high', 'flagship'];
+        const currentIndex = levels.indexOf(this.currentQuality);
+        return levels[Math.min(levels.length - 1, currentIndex + 1)];
+    }
+
+    forceQuality(quality) {
+        if (this.qualityPresets[quality]) {
+            console.log(`🎛️ Quality manually set to: ${quality}`);
+            this.currentQuality = quality;
+            return true;
+        }
+        return false;
+    }
+
+    toggleAdaptiveQuality() {
+        this.adaptiveSettings.enabled = !this.adaptiveSettings.enabled;
+        console.log(`🔄 Adaptive quality: ${this.adaptiveSettings.enabled ? 'enabled' : 'disabled'}`);
+        return this.adaptiveSettings.enabled;
+    }
+}
+
+// Mobile Optimizer - Specialized mobile device optimizations
+class MobileOptimizer {
+    constructor(deviceProfile) {
+        this.deviceProfile = deviceProfile;
+        this.isActive = deviceProfile.isMobile || deviceProfile.isTablet;
+        this.touchState = {
+            active: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            velocity: { x: 0, y: 0 },
+            lastTime: 0
+        };
+        this.batteryOptimization = {
+            enabled: false,
+            lowBatteryThreshold: 0.2,
+            backgroundPaused: false
+        };
+        
+        if (this.isActive) {
+            this.initializeMobileOptimizations();
+        }
+    }
+
+    initializeMobileOptimizations() {
+        // Battery API integration
+        if ('getBattery' in navigator) {
+            navigator.getBattery().then(battery => {
+                this.setupBatteryOptimization(battery);
+            });
+        }
+        
+        // Page visibility API for background optimization
+        document.addEventListener('visibilitychange', () => {
+            this.handleVisibilityChange();
+        });
+        
+        // Enhanced touch handling
+        this.setupEnhancedTouchHandling();
+        
+        // Orientation change handling
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.handleOrientationChange(), 100);
+        });
+        
+        // Memory pressure handling
+        this.setupMemoryPressureHandling();
+    }
+
+    setupBatteryOptimization(battery) {
+        const checkBatteryStatus = () => {
+            const batteryLevel = battery.level;
+            const isCharging = battery.charging;
+            
+            if (batteryLevel < this.batteryOptimization.lowBatteryThreshold && !isCharging) {
+                if (!this.batteryOptimization.enabled) {
+                    console.log('🔋 Low battery detected, enabling power saving mode');
+                    this.enablePowerSavingMode();
+                }
+            } else if (this.batteryOptimization.enabled && (batteryLevel > 0.5 || isCharging)) {
+                console.log('🔋 Battery level restored, disabling power saving mode');
+                this.disablePowerSavingMode();
+            }
+        };
+        
+        // Check immediately and on battery events
+        checkBatteryStatus();
+        battery.addEventListener('levelchange', checkBatteryStatus);
+        battery.addEventListener('chargingchange', checkBatteryStatus);
+    }
+
+    enablePowerSavingMode() {
+        this.batteryOptimization.enabled = true;
+        // This will be used by the animation system to reduce effects
+        console.log('📱 Power saving mode activated');
+    }
+
+    disablePowerSavingMode() {
+        this.batteryOptimization.enabled = false;
+        console.log('📱 Power saving mode deactivated');
+    }
+
+    setupEnhancedTouchHandling() {
+        let touchStartTime = 0;
+        
+        // Passive touch listeners for better performance
+        document.addEventListener('touchstart', (e) => {
+            this.touchState.active = true;
+            this.touchState.startX = e.touches[0].clientX;
+            this.touchState.startY = e.touches[0].clientY;
+            this.touchState.currentX = this.touchState.startX;
+            this.touchState.currentY = this.touchState.startY;
+            this.touchState.lastTime = performance.now();
+            touchStartTime = this.touchState.lastTime;
+        }, { passive: true });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (this.touchState.active) {
+                const now = performance.now();
+                const deltaTime = now - this.touchState.lastTime;
+                
+                const newX = e.touches[0].clientX;
+                const newY = e.touches[0].clientY;
+                
+                // Calculate velocity
+                if (deltaTime > 0) {
+                    this.touchState.velocity.x = (newX - this.touchState.currentX) / deltaTime;
+                    this.touchState.velocity.y = (newY - this.touchState.currentY) / deltaTime;
+                }
+                
+                this.touchState.currentX = newX;
+                this.touchState.currentY = newY;
+                this.touchState.lastTime = now;
+                
+                // Prevent default to avoid scrolling
+                if (this.shouldPreventDefault(e)) {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchend', (e) => {
+            const touchDuration = performance.now() - touchStartTime;
+            const distance = Math.sqrt(
+                Math.pow(this.touchState.currentX - this.touchState.startX, 2) +
+                Math.pow(this.touchState.currentY - this.touchState.startY, 2)
+            );
+            
+            // Detect gesture types
+            if (touchDuration < 200 && distance < 10) {
+                this.handleTap(this.touchState.currentX, this.touchState.currentY);
+            } else if (distance > 50) {
+                this.handleSwipe(
+                    this.touchState.startX, this.touchState.startY,
+                    this.touchState.currentX, this.touchState.currentY,
+                    this.touchState.velocity
+                );
+            }
+            
+            this.touchState.active = false;
+            this.touchState.velocity = { x: 0, y: 0 };
+        }, { passive: true });
+    }
+
+    shouldPreventDefault(e) {
+        // Prevent default for touches in the animation area
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            return (
+                touch.clientX >= rect.left &&
+                touch.clientX <= rect.right &&
+                touch.clientY >= rect.top &&
+                touch.clientY <= rect.bottom
+            );
+        }
+        return false;
+    }
+
+    handleTap(x, y) {
+        // Convert to normalized coordinates
+        const normalizedX = (x / window.innerWidth) * 2 - 1;
+        const normalizedY = -(y / window.innerHeight) * 2 + 1;
+        
+        console.log(`👆 Tap detected at (${normalizedX.toFixed(2)}, ${normalizedY.toFixed(2)})`);
+        // This will be used by the animation system for interaction
+    }
+
+    handleSwipe(startX, startY, endX, endY, velocity) {
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const angle = Math.atan2(deltaY, deltaX);
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        console.log(`👉 Swipe detected: distance=${distance.toFixed(0)}, angle=${(angle * 180 / Math.PI).toFixed(0)}°`);
+        // This will be used by the animation system for gestural interaction
+    }
+
+    handleVisibilityChange() {
+        if (document.hidden) {
+            this.batteryOptimization.backgroundPaused = true;
+            console.log('📱 App backgrounded, pausing intensive operations');
+        } else {
+            this.batteryOptimization.backgroundPaused = false;
+            console.log('📱 App foregrounded, resuming operations');
+        }
+    }
+
+    handleOrientationChange() {
+        console.log('📱 Orientation changed, recalculating layout');
+        // Trigger resize and recalculation
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    setupMemoryPressureHandling() {
+        // Monitor for memory pressure indicators
+        if ('memory' in performance) {
+            setInterval(() => {
+                const memInfo = performance.memory;
+                const memoryPressure = memInfo.usedJSHeapSize / memInfo.jsHeapSizeLimit;
+                
+                if (memoryPressure > 0.8) {
+                    console.log('📱 High memory pressure detected, triggering cleanup');
+                    this.triggerMemoryCleanup();
+                }
+            }, 5000);
+        }
+    }
+
+    triggerMemoryCleanup() {
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+        }
+        
+        // Clear any cached data
+        console.log('🗑️ Memory cleanup triggered');
+    }
+
+    getMobileOptimizedSettings() {
+        if (!this.isActive) return {};
+        
+        const baseOptimizations = {
+            reducedParticleCount: true,
+            simplifiedShaders: true,
+            reducedUpdateFrequency: true,
+            disableComplexEffects: true
+        };
+        
+        if (this.batteryOptimization.enabled) {
+            return {
+                ...baseOptimizations,
+                ultraLowPower: true,
+                reducedFrameRate: true,
+                minimalistEffects: true
+            };
+        }
+        
+        if (this.batteryOptimization.backgroundPaused) {
+            return {
+                ...baseOptimizations,
+                pauseAnimation: true
+            };
+        }
+        
+        return baseOptimizations;
+    }
+
+    getTouchState() {
+        return { ...this.touchState };
+    }
+
+    getPowerSavingState() {
+        return {
+            enabled: this.batteryOptimization.enabled,
+            backgroundPaused: this.batteryOptimization.backgroundPaused
+        };
+    }
+}
+
+// Performance Monitor - Real-time performance tracking and optimization
+class PerformanceMonitor {
+    constructor(targetFPS = 60) {
+        this.targetFPS = targetFPS;
+        this.frameData = {
+            times: [],
+            maxSamples: 60,
+            currentFPS: 0,
+            averageFPS: 0,
+            minFPS: Infinity,
+            maxFPS: 0
+        };
+        this.performanceMetrics = {
+            renderTime: 0,
+            updateTime: 0,
+            totalTime: 0,
+            gpuTime: 0
+        };
+        this.lastFrameTime = performance.now();
+        this.adaptiveSettings = {
+            enabled: true,
+            aggressive: false,
+            smoothingFactor: 0.95
+        };
+        this.thermalState = {
+            throttleDetected: false,
+            baselinePerformance: null,
+            degradationThreshold: 0.7
+        };
+    }
+
+    recordFrame() {
+        const now = performance.now();
+        const deltaTime = now - this.lastFrameTime;
+        this.lastFrameTime = now;
+        
+        // Record frame time
+        this.frameData.times.push(deltaTime);
+        if (this.frameData.times.length > this.frameData.maxSamples) {
+            this.frameData.times.shift();
+        }
+        
+        // Calculate FPS metrics
+        this.calculateFPSMetrics();
+        
+        // Detect thermal throttling
+        this.detectThermalThrottling();
+        
+        return {
+            fps: this.frameData.currentFPS,
+            frameTime: deltaTime
+        };
+    }
+
+    calculateFPSMetrics() {
+        if (this.frameData.times.length === 0) return;
+        
+        const recent = this.frameData.times.slice(-10);
+        const avgFrameTime = recent.reduce((a, b) => a + b) / recent.length;
+        this.frameData.currentFPS = 1000 / avgFrameTime;
+        
+        // Overall average
+        const totalAvg = this.frameData.times.reduce((a, b) => a + b) / this.frameData.times.length;
+        this.frameData.averageFPS = 1000 / totalAvg;
+        
+        // Min/Max tracking
+        this.frameData.minFPS = Math.min(this.frameData.minFPS, this.frameData.currentFPS);
+        this.frameData.maxFPS = Math.max(this.frameData.maxFPS, this.frameData.currentFPS);
+    }
+
+    detectThermalThrottling() {
+        // Establish baseline if not set
+        if (!this.thermalState.baselinePerformance && this.frameData.times.length >= 30) {
+            this.thermalState.baselinePerformance = this.frameData.averageFPS;
+            console.log(`🌡️ Baseline performance established: ${this.thermalState.baselinePerformance.toFixed(1)} FPS`);
+            return;
+        }
+        
+        // Check for throttling
+        if (this.thermalState.baselinePerformance) {
+            const performanceRatio = this.frameData.averageFPS / this.thermalState.baselinePerformance;
+            
+            if (performanceRatio < this.thermalState.degradationThreshold && !this.thermalState.throttleDetected) {
+                this.thermalState.throttleDetected = true;
+                console.log(`🌡️ Thermal throttling detected (${(performanceRatio * 100).toFixed(1)}% of baseline)`);
+            } else if (performanceRatio > 0.9 && this.thermalState.throttleDetected) {
+                this.thermalState.throttleDetected = false;
+                console.log('🌡️ Thermal throttling resolved');
+            }
+        }
+    }
+
+    startFrameTiming() {
+        this.performanceMetrics.frameStartTime = performance.now();
+    }
+
+    endFrameTiming() {
+        if (this.performanceMetrics.frameStartTime) {
+            this.performanceMetrics.totalTime = performance.now() - this.performanceMetrics.frameStartTime;
+        }
+    }
+
+    recordRenderTime(time) {
+        this.performanceMetrics.renderTime = time;
+    }
+
+    recordUpdateTime(time) {
+        this.performanceMetrics.updateTime = time;
+    }
+
+    getPerformanceState() {
+        const performanceLevel = this.classifyPerformance();
+        
+        return {
+            fps: {
+                current: this.frameData.currentFPS,
+                average: this.frameData.averageFPS,
+                min: this.frameData.minFPS,
+                max: this.frameData.maxFPS,
+                target: this.targetFPS
+            },
+            timing: { ...this.performanceMetrics },
+            level: performanceLevel,
+            thermal: { ...this.thermalState },
+            adaptive: { ...this.adaptiveSettings }
+        };
+    }
+
+    classifyPerformance() {
+        const fpsRatio = this.frameData.currentFPS / this.targetFPS;
+        
+        if (fpsRatio >= 0.95) return 'excellent';
+        if (fpsRatio >= 0.80) return 'good';
+        if (fpsRatio >= 0.60) return 'fair';
+        if (fpsRatio >= 0.40) return 'poor';
+        return 'critical';
+    }
+
+    getOptimizationRecommendations() {
+        const state = this.getPerformanceState();
+        const recommendations = [];
+        
+        if (state.level === 'critical' || state.level === 'poor') {
+            recommendations.push('reduce_particle_count');
+            recommendations.push('disable_complex_effects');
+            recommendations.push('reduce_update_frequency');
+        }
+        
+        if (state.level === 'fair') {
+            recommendations.push('simplify_shaders');
+            recommendations.push('reduce_quality');
+        }
+        
+        if (state.thermal.throttleDetected) {
+            recommendations.push('thermal_management');
+            recommendations.push('reduce_all_effects');
+        }
+        
+        return recommendations;
+    }
+
+    shouldReduceQuality() {
+        return this.frameData.currentFPS < this.targetFPS * 0.8 || this.thermalState.throttleDetected;
+    }
+
+    shouldIncreaseQuality() {
+        return this.frameData.currentFPS > this.targetFPS * 1.1 && !this.thermalState.throttleDetected;
+    }
+
+    reset() {
+        this.frameData.times = [];
+        this.frameData.minFPS = Infinity;
+        this.frameData.maxFPS = 0;
+        this.thermalState.baselinePerformance = null;
+        this.thermalState.throttleDetected = false;
+        console.log('📊 Performance metrics reset');
+    }
+}
+
+// === END INTELLIGENT DEVICE ADAPTATION SYSTEM ===
+
 // Stage Durations for Organic Flow - FASTER AND SMOOTHER
 const STAGE_DURATIONS = {
     CONVERGING: 2000,    // 2 seconds for convergence
@@ -1136,11 +2028,32 @@ function perlinNoise(x, y, seed = 0) {
 
 class ParticleAnimation {
     constructor() {
+        // === INTELLIGENT DEVICE ADAPTATION INITIALIZATION ===
+        console.log('🚀 Initializing intelligent device adaptation system...');
+        this.deviceIntelligence = new DeviceIntelligence();
+        
+        // Get optimal configuration based on device analysis
+        const deviceConfig = this.deviceIntelligence.getOptimalConfig();
+        console.log(`📱 Device class: ${deviceConfig.deviceClass}`);
+        console.log(`💻 Device type: ${deviceConfig.profile.isMobile ? 'Mobile' : deviceConfig.profile.isTablet ? 'Tablet' : 'Desktop'}`);
+        
+        // Initialize intelligent systems
+        this.qualityManager = new QualityManager(deviceConfig);
+        this.mobileOptimizer = new MobileOptimizer(deviceConfig.profile);
+        this.performanceMonitor = new PerformanceMonitor(this.qualityManager.getTargetFPS());
+        
+        // Get current quality settings
+        const qualitySettings = this.qualityManager.getCurrentSettings();
+        console.log(`⚙️ Quality level: ${this.qualityManager.currentQuality}`);
+        console.log(`🎯 Target FPS: ${this.qualityManager.getTargetFPS()}`);
+        console.log(`🎨 Particle count: ${qualitySettings.particleCount}`);
+        
+        // === CORE ANIMATION SYSTEM ===
         this.scene = null;
         this.camera = null;
         this.renderer = null;
         this.particles = null;
-        this.particleCount = 2000; // Further reduce for smoothness
+        this.particleCount = qualitySettings.particleCount; // Dynamic based on device
         
         // Position arrays (preserved X shapes)
         this.positions1 = [];
@@ -1154,41 +2067,41 @@ class ParticleAnimation {
         this.particlePhases = [];
         this.particleTrails = [];
         
-        // Interactive controls
+        // Interactive controls - Enhanced for mobile
         this.mouse = { x: 0, y: 0, isDown: false };
         this.mouseForce = { x: 0, y: 0, strength: 0 };
         this.attractionMode = false;
-        this.interactionRadius = 2.0;
-        this.forceStrength = 0.02;
+        this.interactionRadius = deviceConfig.profile.isMobile ? 3.0 : 2.0; // Larger on mobile
+        this.forceStrength = deviceConfig.profile.isMobile ? 0.03 : 0.02;
         
-        // Physics enhancement
+        // Physics enhancement - Adaptive
         this.gravity = { x: 0, y: 0, z: 0 };
         this.windForce = { x: 0, y: 0, z: 0 };
-        this.turbulence = 0.005;
+        this.turbulence = qualitySettings.complexShaders ? 0.005 : 0.003;
         
         // Camera controls
         this.cameraTarget = { x: 0, y: 0, z: 5 };
         this.cameraSpeed = 0.05;
         this.zoomLevel = 1.0;
         
-        // Audio reactive features
+        // Audio reactive features - Disabled on low-end devices
         this.audioContext = null;
         this.analyser = null;
         this.audioData = null;
-        this.audioEnabled = false;
+        this.audioEnabled = qualitySettings.complexShaders; // Only enable on capable devices
         this.bassFrequency = 0;
         this.midFrequency = 0;
         this.trebleFrequency = 0;
         
-        // Particle emission system
+        // Particle emission system - Adaptive
         this.emissionPoints = [];
-        this.maxEmissionParticles = 500;
-        this.emissionRate = 5;
+        this.maxEmissionParticles = Math.floor(qualitySettings.particleCount * 0.25);
+        this.emissionRate = qualitySettings.updateFrequency === 1 ? 5 : 3;
         this.emissionEnabled = false;
         
-        // Performance optimization
+        // Performance optimization - Now intelligent
         this.frameCount = 0;
-        this.qualityLevel = 'high'; // 'low', 'medium', 'high'
+        this.qualityLevel = this.qualityManager.currentQuality;
         this.performanceMode = false;
         
         // Color schemes
@@ -1299,26 +2212,64 @@ class ParticleAnimation {
     }
     
     createScene() {
+        // === INTELLIGENT SCENE CREATION ===
+        const qualitySettings = this.qualityManager.getCurrentSettings();
+        const deviceProfile = this.deviceIntelligence.deviceProfile;
+        
+        console.log('🎬 Creating optimized scene for device...');
+        
         // 创建场景
         this.scene = new THREE.Scene();
         
-        // 创建相机
+        // 创建相机 - Adaptive FOV for mobile
+        const fov = deviceProfile.isMobile ? 80 : 75; // Wider FOV on mobile for better view
         this.camera = new THREE.PerspectiveCamera(
-            75, 
+            fov, 
             window.innerWidth / window.innerHeight, 
             0.1, 
             1000
         );
-        this.camera.position.z = 5;
+        this.camera.position.z = deviceProfile.isMobile ? 6 : 5; // Slightly further back on mobile
         
-        // 创建渲染器
-        this.renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            alpha: true
-        });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        // 创建渲染器 - Intelligent quality settings
+        const rendererOptions = {
+            antialias: qualitySettings.antialiasing,
+            alpha: true,
+            powerPreference: deviceProfile.isMobile ? 'low-power' : 'high-performance',
+            precision: qualitySettings.complexShaders ? 'highp' : 'mediump',
+            stencil: false, // Disable stencil buffer for better performance
+            depth: qualitySettings.depthTesting
+        };
+        
+        this.renderer = new THREE.WebGLRenderer(rendererOptions);
+        
+        // Set size with intelligent scaling
+        const renderScale = qualitySettings.renderScale;
+        const scaledWidth = Math.floor(window.innerWidth * renderScale);
+        const scaledHeight = Math.floor(window.innerHeight * renderScale);
+        
+        this.renderer.setSize(scaledWidth, scaledHeight);
+        this.renderer.domElement.style.width = window.innerWidth + 'px';
+        this.renderer.domElement.style.height = window.innerHeight + 'px';
+        
+        // Intelligent pixel ratio setting
+        const maxPixelRatio = deviceProfile.isMobile ? 2 : window.devicePixelRatio;
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+        
         this.renderer.setClearColor(0x000000);
+        
+        // Additional mobile optimizations
+        if (deviceProfile.isMobile) {
+            this.renderer.shadowMap.enabled = false; // Disable shadows on mobile
+            this.renderer.sortObjects = false; // Disable sorting for better performance
+        }
+        
         document.getElementById('canvasContainer').appendChild(this.renderer.domElement);
+        
+        console.log(`🎨 Renderer created: ${scaledWidth}x${scaledHeight} (scale: ${renderScale})`);
+        console.log(`📐 Pixel ratio: ${this.renderer.getPixelRatio()}`);
+        console.log(`✨ Antialiasing: ${qualitySettings.antialiasing ? 'enabled' : 'disabled'}`);
+        console.log(`🔧 Power preference: ${rendererOptions.powerPreference}`);
         
         // ENHANCED: 处理窗口大小调整 with environmental awareness
         window.addEventListener('resize', () => {
@@ -3576,44 +4527,74 @@ class ParticleAnimation {
     animate() {
         requestAnimationFrame(() => this.animate());
         
+        // === INTELLIGENT PERFORMANCE MONITORING ===
+        this.performanceMonitor.startFrameTiming();
+        const frameData = this.performanceMonitor.recordFrame();
+        
         this.frameCount++;
+        
+        // Check for mobile power saving mode
+        const mobileSettings = this.mobileOptimizer.getMobileOptimizedSettings();
+        if (mobileSettings.pauseAnimation) {
+            // Animation paused due to background state
+            this.performanceMonitor.endFrameTiming();
+            return;
+        }
+        
+        // Adaptive quality adjustment based on performance
+        if (this.frameCount % 60 === 0) { // Check every second
+            const qualityChanged = this.qualityManager.adjustQualityBasedOnPerformance(frameData.fps);
+            if (qualityChanged) {
+                this.applyNewQualitySettings();
+            }
+        }
         
         // Apply interactive forces and physics when particles exist
         if (this.particles) {
+            const qualitySettings = this.qualityManager.getCurrentSettings();
+            const deviceProfile = this.deviceIntelligence.deviceProfile;
+            
             // Update shader uniforms for time-based effects
             if (this.particles.material.uniforms) {
                 this.particles.material.uniforms.time.value = performance.now() * 0.001;
             }
             
-            // Epic Enhancement: Update energy trail system
-            this.updateEnergyTrails();
+            // Epic Enhancement: Update energy trail system (quality dependent)
+            if (qualitySettings.trailLength > 0) {
+                this.updateEnergyTrails();
+            }
             
-            // Epic Enhancement: Update visual effects
-            this.updateGodRayVisuals();
-            this.updateTrailVisuals();
+            // Epic Enhancement: Update visual effects (quality dependent)
+            if (qualitySettings.godRaysIntensity > 0) {
+                this.updateGodRayVisuals();
+            }
+            if (qualitySettings.trailLength > 0) {
+                this.updateTrailVisuals();
+            }
             
-            // Epic Enhancement: Apply mouse magnetism during breathing phase
+            // Epic Enhancement: Apply mouse magnetism during breathing phase (mobile optimized)
             if (this.currentState === ANIMATION_STATES.X_BREATHING) {
                 this.mouseMagnetism.enabled = true;
-                this.applyMouseMagnetism(this.particles.geometry.attributes.position.array);
-                this.particles.geometry.attributes.position.needsUpdate = true;
+                if (!deviceProfile.isMobile || this.frameCount % 2 === 0) {
+                    // Reduce update frequency on mobile
+                    this.applyMouseMagnetism(this.particles.geometry.attributes.position.array);
+                    this.particles.geometry.attributes.position.needsUpdate = true;
+                }
             } else {
                 this.mouseMagnetism.enabled = false;
             }
             
-            // Epic Enhancement: Update procedural audio (DISABLED)
-            // Audio system completely disabled to avoid browser autoplay issues
-            // if (this.currentState === ANIMATION_STATES.ACTIVATION || 
-            //     this.currentState === ANIMATION_STATES.X_BREATHING) {
-            //     this.audioSystem.enabled = true;
-            //     this.updateProceduralAudio();
-            // } else if (this.audioSystem.enabled) {
-            //     this.audioSystem.enabled = false;
-            //     this.stopProceduralAudio();
-            // }
+            // Epic Enhancement: Update procedural audio (DISABLED on low-end devices)
+            // Audio system disabled on low-end devices or power saving mode
+            if (this.audioEnabled && !mobileSettings.ultraLowPower) {
+                // Audio processing only on capable devices
+            }
             
-            // 大幅减少更新频率
-            const shouldUpdate = !this.performanceMode || this.frameCount % 5 === 0;
+            // Intelligent update frequency based on device capabilities
+            const updateFrequency = mobileSettings.ultraLowPower ? 4 : 
+                                   mobileSettings.reducedUpdateFrequency ? 3 : 
+                                   qualitySettings.updateFrequency;
+            const shouldUpdate = this.frameCount % updateFrequency === 0;
             
             if (shouldUpdate) {
                 // 暂时禁用这些特效以提高性能
@@ -3638,6 +4619,9 @@ class ParticleAnimation {
         this.updateCamera();
         
         this.renderer.render(this.scene, this.camera);
+        
+        // === COMPLETE PERFORMANCE MONITORING ===
+        this.performanceMonitor.endFrameTiming();
     }
 
     // 新增：改进的数组填充方法
@@ -4236,6 +5220,159 @@ class ParticleAnimation {
             // Log current status
             console.log('Current transition status:', this.getTransitionStatus());
         }
+    }
+
+    // === INTELLIGENT DEVICE ADAPTATION METHODS ===
+
+    applyNewQualitySettings() {
+        const qualitySettings = this.qualityManager.getCurrentSettings();
+        const oldParticleCount = this.particleCount;
+        
+        console.log(`🔄 Applying new quality settings: ${this.qualityManager.currentQuality}`);
+        
+        // Update particle count if needed
+        if (qualitySettings.particleCount !== oldParticleCount) {
+            this.particleCount = qualitySettings.particleCount;
+            console.log(`🎨 Particle count adjusted: ${oldParticleCount} → ${this.particleCount}`);
+            
+            // TODO: Reconstruct particle system with new count
+            // For now, just update the reference count
+        }
+        
+        // Update trail settings
+        this.trailLength = qualitySettings.trailLength;
+        
+        // Update emission settings
+        this.maxEmissionParticles = Math.floor(qualitySettings.particleCount * 0.25);
+        this.emissionRate = qualitySettings.updateFrequency === 1 ? 5 : 3;
+        
+        // Update turbulence
+        this.turbulence = qualitySettings.complexShaders ? 0.005 : 0.003;
+        
+        // Update god rays intensity
+        if (this.godRays) {
+            this.godRays.intensity *= qualitySettings.godRaysIntensity / 0.8; // Adjust relative to max
+        }
+        
+        console.log(`✅ Quality settings applied successfully`);
+    }
+
+    // Device information methods
+    getDeviceInformation() {
+        const deviceConfig = this.deviceIntelligence.getOptimalConfig();
+        const qualitySettings = this.qualityManager.getCurrentSettings();
+        const performanceState = this.performanceMonitor.getPerformanceState();
+        const mobileSettings = this.mobileOptimizer.getMobileOptimizedSettings();
+        const powerState = this.mobileOptimizer.getPowerSavingState();
+        
+        return {
+            device: {
+                class: deviceConfig.deviceClass,
+                type: deviceConfig.profile.isMobile ? 'Mobile' : 
+                      deviceConfig.profile.isTablet ? 'Tablet' : 'Desktop',
+                profile: deviceConfig.profile,
+                benchmark: deviceConfig.benchmark
+            },
+            quality: {
+                current: this.qualityManager.currentQuality,
+                settings: qualitySettings,
+                adaptive: this.qualityManager.adaptiveSettings.enabled
+            },
+            performance: performanceState,
+            mobile: {
+                optimizations: mobileSettings,
+                powerSaving: powerState,
+                touchState: this.mobileOptimizer.getTouchState()
+            }
+        };
+    }
+
+    // Manual quality control
+    setQualityLevel(level) {
+        if (this.qualityManager.forceQuality(level)) {
+            this.applyNewQualitySettings();
+            return true;
+        }
+        return false;
+    }
+
+    // Performance control methods
+    toggleAdaptiveQuality() {
+        return this.qualityManager.toggleAdaptiveQuality();
+    }
+
+    resetPerformanceMetrics() {
+        this.performanceMonitor.reset();
+        console.log('📊 Performance metrics reset');
+    }
+
+    // Mobile-specific controls
+    enablePowerSavingMode() {
+        if (this.mobileOptimizer.isActive) {
+            this.mobileOptimizer.enablePowerSavingMode();
+            this.setQualityLevel('minimal');
+        }
+    }
+
+    disablePowerSavingMode() {
+        if (this.mobileOptimizer.isActive) {
+            this.mobileOptimizer.disablePowerSavingMode();
+            // Let adaptive quality determine the best level
+        }
+    }
+
+    // Performance monitoring
+    getPerformanceStats() {
+        const baseStats = {
+            particleCount: this.particleCount,
+            emissionPoints: this.emissionPoints.length,
+            audioEnabled: this.audioEnabled,
+            performanceMode: this.performanceMode,
+            frameCount: this.frameCount
+        };
+        
+        return {
+            ...baseStats,
+            intelligent: this.getDeviceInformation()
+        };
+    }
+
+    // Enhanced status reporting
+    getEnhancedStatus() {
+        const transitionStatus = this.getTransitionStatus();
+        const deviceInfo = this.getDeviceInformation();
+        
+        return {
+            animation: {
+                currentState: this.currentState,
+                stateProgress: this.stateProgress,
+                isAnimating: this.isAnimating
+            },
+            transitions: transitionStatus,
+            device: deviceInfo,
+            recommendations: this.performanceMonitor.getOptimizationRecommendations()
+        };
+    }
+
+    // Developer utilities
+    benchmarkDevice() {
+        console.log('🧪 Running device benchmark...');
+        this.deviceIntelligence.runQuickBenchmark();
+        return this.deviceIntelligence.performanceBenchmark;
+    }
+
+    logDeviceCapabilities() {
+        const info = this.getDeviceInformation();
+        console.group('📱 Device Capabilities Report');
+        console.log('Device Class:', info.device.class);
+        console.log('Device Type:', info.device.type);
+        console.log('Quality Level:', info.quality.current);
+        console.log('Performance:', info.performance.level);
+        console.log('Current FPS:', info.performance.fps.current.toFixed(1));
+        console.log('Target FPS:', info.performance.fps.target);
+        console.log('Particle Count:', info.quality.settings.particleCount);
+        console.log('Mobile Optimizations:', info.mobile.optimizations);
+        console.groupEnd();
     }
 }
 

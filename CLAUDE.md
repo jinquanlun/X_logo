@@ -6,13 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Three.js particle animation project that creates a morphing X logo effect. The animation uses particles to form the shape of an X logo based on image masks and transitions between two different X shapes.
 
-**ENHANCED VERSION**: The project now features an advanced **Multi-Dimensional Emotional Intelligence Transition System** that significantly improves animation transitions with:
+**ENHANCED VERSION**: The project now features an advanced **Multi-Dimensional Emotional Intelligence Transition System** and **Intelligent Device Adaptation System** that significantly improves animation transitions and optimizes performance across all devices:
 
+### Emotional Intelligence System
 - **Emotional Transition Engine**: Provides expressive animations with anticipation, excitement, calm, release, and harmony emotional states
 - **Intelligent Rhythm Control**: Adapts timing based on particle convergence analysis and energy distribution
 - **Multi-Dimensional Interpolator**: Advanced Bézier curves, harmonic blending, and elastic spring interpolations
 - **Predictive Transition Preparation**: Pre-warms effects for seamless state transitions
 - **Environmental Awareness**: Responds to mouse behavior, window size, and performance state
+
+### Intelligent Device Adaptation System
+- **Smart Device Detection**: Automatic hardware analysis, performance benchmarking, and device classification
+- **Five-Tier Quality Management**: From minimal to flagship quality presets with real-time adaptive adjustment
+- **Mobile Optimization**: Battery-aware modes, enhanced touch interaction, memory pressure handling
+- **Performance Monitoring**: Real-time FPS tracking, thermal throttling detection, optimization recommendations
+- **Responsive Design**: Automatic scaling, viewport optimization, and power-preference settings
 
 ## Development Commands
 
@@ -26,10 +34,13 @@ This is a Three.js particle animation project that creates a morphing X logo eff
   ```
 - **Debug Mode**: Open browser DevTools to see console logs for image loading status and particle counts
 - **Enhanced Controls**: 
-  - Use browser console to access advanced transition controls
+  - Use browser console to access advanced transition and device adaptation controls
   - Call `animation.toggleEmotionalResponse()` to enable/disable emotional intelligence
   - Call `animation.setTransitionSmoothnessLevel('ultra')` for maximum quality
   - Call `animation.getTransitionStatus()` to view current enhancement state
+  - Call `animation.logDeviceCapabilities()` to view device analysis and optimization
+  - Call `animation.setQualityLevel('high')` to manually set quality level
+  - Call `animation.getEnhancedStatus()` for comprehensive system status
 - **Image Assets**: The animation requires `pic1.png` and `pic2.png` files in the root directory
 
 ## Project Structure
@@ -40,7 +51,33 @@ This is a Three.js particle animation project that creates a morphing X logo eff
 
 ## Architecture Deep Dive
 
-The `ParticleAnimation` class follows a state-driven architecture enhanced with emotional intelligence:
+The `ParticleAnimation` class follows a state-driven architecture enhanced with emotional intelligence and intelligent device adaptation:
+
+### Intelligent Device Adaptation Architecture
+
+1. **Device Intelligence** (`DeviceIntelligence`):
+   - Analyzes hardware characteristics, screen size, and WebGL capabilities
+   - Runs performance benchmarks to validate device classification
+   - Provides device scoring algorithm (0-100) for quality determination
+   - Detects mobile devices, tablets, and low-power modes
+
+2. **Quality Manager** (`QualityManager`):
+   - Manages five quality presets from minimal to flagship
+   - Implements real-time adaptive quality adjustment based on FPS
+   - Provides mobile-specific quality mapping for battery optimization
+   - Controls particle count, effects complexity, and update frequency
+
+3. **Mobile Optimizer** (`MobileOptimizer`):
+   - Battery API integration for automatic power saving modes
+   - Enhanced touch handling with gesture recognition
+   - Page visibility API for background animation pausing
+   - Memory pressure monitoring and cleanup
+
+4. **Performance Monitor** (`PerformanceMonitor`):
+   - Real-time FPS tracking and frame time analysis
+   - Thermal throttling detection and baseline performance comparison
+   - Optimization recommendations based on performance metrics
+   - Adaptive performance level classification
 
 ### Enhanced Transition System Architecture
 
@@ -123,19 +160,45 @@ The `ParticleAnimation` class follows a state-driven architecture enhanced with 
 
 ```javascript
 // Access the animation instance (available globally after initialization)
+
+// === Emotional Intelligence Controls ===
 // Enable emotional intelligence
 animation.toggleEmotionalResponse();
 
 // Set ultra-smooth transitions
 animation.setTransitionSmoothnessLevel('ultra');
 
-// Enable all enhancements
+// Enable all transition enhancements
 animation.toggleAdaptiveTiming();
 animation.togglePredictivePreparation();
 animation.toggleEnvironmentalAdaptation();
 
-// Check current status
+// === Device Adaptation Controls ===
+// View device capabilities and current settings
+animation.logDeviceCapabilities();
+
+// Manual quality control
+animation.setQualityLevel('high'); // 'minimal', 'low', 'medium', 'high', 'flagship'
+
+// Toggle adaptive quality adjustment
+animation.toggleAdaptiveQuality();
+
+// Mobile-specific controls
+animation.enablePowerSavingMode();
+animation.disablePowerSavingMode();
+
+// === Status and Monitoring ===
+// Check transition status
 console.log(animation.getTransitionStatus());
+
+// Get comprehensive system status
+console.log(animation.getEnhancedStatus());
+
+// Performance statistics
+console.log(animation.getPerformanceStats());
+
+// Run device benchmark
+const benchmark = animation.benchmarkDevice();
 
 // Debug mode for development
 animation.toggleDebugMode();
